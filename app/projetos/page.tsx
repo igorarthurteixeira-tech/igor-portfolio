@@ -17,43 +17,49 @@ export default function ProjetosPage() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {projects.map((project, index) => (
-            <AnimatedCard key={project.id} delay={index * 150}>
-              <div className="group h-full flex flex-col bg-[#1a1a1a] border border-white/10 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:border-white/20">
+          {projects.map((project, index) => {
 
-                {!project.link && (
-                  <span className="inline-block text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full mb-4">
-                    Em desenvolvimento
-                  </span>
-                )}
+            const isDevelopment = project.status === "development";
+            const isPublished = project.status === "published";
 
-                <h3 className="text-xl font-semibold text-white mb-3">
-                  {project.title}
-                </h3>
+            return (
+              <AnimatedCard key={project.id} delay={index * 150}>
+                <div className="group h-full flex flex-col bg-[#1a1a1a] border border-white/10 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:border-white/20">
 
-                <p className="text-gray-400 mb-6">
-                  {project.description}
-                </p>
+                  {isDevelopment && (
+                    <span className="inline-block text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full mb-4">
+                      Em desenvolvimento
+                    </span>
+                  )}
 
-                <div className="text-sm text-gray-500 mb-6">
-                  {project.tech}
+                  <h3 className="text-xl font-semibold text-white mb-3">
+                    {project.title}
+                  </h3>
+
+                  <p className="text-gray-400 mb-6">
+                    {project.description}
+                  </p>
+
+                  <div className="text-sm text-gray-500 mb-6">
+                    {project.tech}
+                  </div>
+
+                  {isPublished && project.link && (
+                    <a
+                      href={project.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white text-sm mt-auto relative inline-block"
+                    >
+                      Acessar projeto →
+                      <span className="absolute left-0 -bottom-1 h-px w-0 bg-white transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                  )}
+
                 </div>
-
-                {project.link && (
-                  <a
-                    href={project.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white text-sm mt-auto relative inline-block"
-                  >
-                    Acessar projeto →
-                    <span className="absolute left-0 -bottom-1 h-px w-0 bg-white transition-all duration-300 group-hover:w-full"></span>
-                  </a>
-                )}
-
-              </div>
-            </AnimatedCard>
-          ))}
+              </AnimatedCard>
+            );
+          })}
         </div>
 
       </div>
