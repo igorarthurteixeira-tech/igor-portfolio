@@ -36,17 +36,18 @@ export const projects: Project[] = [
     tech: "Excel • VBA • Automação",
     featured: true,
     status: "published"
-  }/*,
+  },
   
   {
-    id: "projeto-extra",
-    title: "Projeto Extra",
-    description:
-      "Projeto adicional que aparece apenas na biblioteca completa.",
-    tech: "Node.js • API",
-    featured: false,
-    status: "published"
-  },
+  id: "sorveteria",
+  title: "Mi Casita",
+  description:
+    "Aplicação web para gelateria boutique desenvolvida com Next.js 16, focada em experiência refinada e fluxo de reserva com retirada na loja. Implementa carrinho global com Context API, arquitetura híbrida (Server e Client Components) e interface elegante construída com Tailwind CSS.",
+  tech: "Next.js 16 • React • TypeScript • Tailwind CSS • Context API • Deploy Vercel",
+  link: "https://mi-casita.vercel.app/",
+  featured: true,
+  status: "published"
+}/*,
 
   {
     id: "projeto-extra2",
