@@ -158,9 +158,12 @@ export default function Home() {
               <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-gray-500">
                 Formação complementar
               </p>
-              <h3 className="mb-4 text-xl font-semibold text-white">
+              <h3 className="mb-2 text-xl font-semibold text-white">
                 Curso de Programação Full Stack
               </h3>
+              <p className="mb-4 text-base font-medium text-gray-300">
+                Instituição de ensino: b7Web
+              </p>
               <p className="leading-relaxed text-gray-400">
                 Estudo de desenvolvimento de aplicações completas, incluindo
                 interface, regras de negócio, estrutura de dados e integração
