@@ -43,7 +43,7 @@ export const projects: Project[] = [
       "Aplicação web desenvolvida com Next.js 16, focada em experiência refinada e fluxo de reserva com retirada na loja. Implementa carrinho global com Context API, arquitetura híbrida e interface elegante construída com Tailwind CSS.",
     tech:
       "Next.js 16 • React • TypeScript • Tailwind CSS • Context API • Deploy Vercel",
-    link: "https://mi-casita.vercel.app/",
+    link: "https://sistema-para-gelateria-boutique.vercel.app/",
     featured: true,
     status: "published",
   },
