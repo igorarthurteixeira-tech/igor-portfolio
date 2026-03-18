@@ -125,6 +125,49 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="border-b border-white/5 bg-[#101010] px-6 pb-20 pt-20 md:pb-24 md:pt-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10 max-w-3xl">
+            <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl">
+              Formação
+            </h2>
+            <p className="text-gray-400">
+              Base acadêmica e estudos aplicados em tecnologia, sistemas e
+              desenvolvimento de aplicações.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-[#181818] p-8">
+              <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-gray-500">
+                Graduação
+              </p>
+              <h3 className="mb-4 text-xl font-semibold text-white">
+                Gestão da Tecnologia da Informação - em andamento
+              </h3>
+              <p className="leading-relaxed text-gray-400">
+                Ênfase em gestão de sistemas, organização de processos, suporte
+                à operação e visão estratégica de tecnologia.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-[#181818] p-8">
+              <p className="mb-3 text-sm font-medium uppercase tracking-[0.18em] text-gray-500">
+                Formação complementar
+              </p>
+              <h3 className="mb-4 text-xl font-semibold text-white">
+                Curso de Programação Full Stack
+              </h3>
+              <p className="leading-relaxed text-gray-400">
+                Estudo de desenvolvimento de aplicações completas, incluindo
+                interface, regras de negócio, estrutura de dados e integração
+                entre camadas.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="projetos" className="bg-[#0f0f0f] px-6 pb-24 pt-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-12 text-center">
