@@ -14,17 +14,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-br">
-      <body className="bg-black text-white min-h-screen flex flex-col">
-
+    <html lang="pt-BR">
+      <body className="flex min-h-screen flex-col bg-black text-white">
         <Navbar />
-
-        <main className="grow pt-28">
-          {children}
-        </main>
-
+        <main className="grow pt-28">{children}</main>
         <Footer />
-      <ScrollToTop />
+        <ScrollToTop />
       </body>
     </html>
   );

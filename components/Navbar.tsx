@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -12,22 +12,16 @@ export default function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Detect scroll shrink
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
     };
 
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close menu on route change
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
-
-  // Close when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -45,18 +39,17 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
 
+  const closeMenu = () => setMenuOpen(false);
+
   return (
     <>
-      {/* NAVBAR */}
       <nav
-        className={`fixed top-0 left-0 w-full bg-black border-b border-white/10 z-50 transition-all duration-300 ${
+        className={`fixed left-0 top-0 z-50 w-full border-b border-white/10 bg-black transition-all duration-300 ${
           scrolled ? "py-3" : "py-6"
         }`}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex justify-between items-center">
-
-          {/* Logo */}
-          <Link href="/">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" onClick={closeMenu}>
             <Image
               src="/logo.png"
               alt="Igor Arthur Logo"
@@ -69,36 +62,35 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* Desktop Links */}
-          <div className="hidden sm:flex gap-6 text-gray-400 text-sm">
+          <div className="hidden gap-6 text-sm text-gray-400 sm:flex">
             {pathname !== "/" && (
-              <Link href="/" className="hover:text-white transition">
+              <Link href="/" className="transition hover:text-white">
                 Início
               </Link>
             )}
 
             {pathname === "/" && (
               <>
-                <a href="#sobre" className="hover:text-white transition">
+                <a href="#sobre" className="transition hover:text-white">
                   Sobre
                 </a>
-                <a href="#projetos" className="hover:text-white transition">
+                <a href="#projetos" className="transition hover:text-white">
                   Projetos
                 </a>
               </>
             )}
 
-            <a href="#contato" className="hover:text-white transition">
+            <a href="#contato" className="transition hover:text-white">
               Contato
             </a>
           </div>
 
-          {/* Mobile Button */}
           <button
             ref={buttonRef}
-            className="sm:hidden relative w-8 h-8 flex items-center justify-center"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Menu"
+            className="relative flex h-8 w-8 items-center justify-center sm:hidden"
+            onClick={() => setMenuOpen((current) => !current)}
+            aria-expanded={menuOpen}
+            aria-label="Abrir menu"
           >
             <span
               className={`absolute h-0.5 w-6 bg-white transition-all duration-300 ${
@@ -119,27 +111,21 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* MOBILE MENU (fixed, calculado abaixo da navbar) */}
       <div
         ref={menuRef}
-        className={`sm:hidden fixed left-0 w-full bg-black border-t border-white/10 z-50
-          transition-all duration-300 ease-in-out
-          ${
-            menuOpen
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 -translate-y-2 pointer-events-none"
-          }`}
-        style={{
-          top: scrolled ? "56px" : "80px"
-        }}
+        className={`fixed left-0 z-50 w-full border-t border-white/10 bg-black transition-all duration-300 ease-in-out sm:hidden ${
+          menuOpen
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-2 opacity-0"
+        }`}
+        style={{ top: scrolled ? "56px" : "80px" }}
       >
-        <div className="px-6 py-6 flex flex-col gap-5 text-gray-400 text-base">
-
+        <div className="flex flex-col gap-5 px-6 py-6 text-base text-gray-400">
           {pathname !== "/" && (
             <Link
               href="/"
-              onClick={() => setMenuOpen(false)}
-              className="block hover:text-white transition"
+              onClick={closeMenu}
+              className="block transition hover:text-white"
             >
               Início
             </Link>
@@ -149,16 +135,15 @@ export default function Navbar() {
             <>
               <a
                 href="#sobre"
-                onClick={() => setMenuOpen(false)}
-                className="block hover:text-white transition"
+                onClick={closeMenu}
+                className="block transition hover:text-white"
               >
                 Sobre
               </a>
-
               <a
                 href="#projetos"
-                onClick={() => setMenuOpen(false)}
-                className="block hover:text-white transition"
+                onClick={closeMenu}
+                className="block transition hover:text-white"
               >
                 Projetos
               </a>
@@ -167,20 +152,18 @@ export default function Navbar() {
 
           <a
             href="#contato"
-            onClick={() => setMenuOpen(false)}
-            className="block hover:text-white transition"
+            onClick={closeMenu}
+            className="block transition hover:text-white"
           >
             Contato
           </a>
-
         </div>
       </div>
 
-      {/* Overlay Blur */}
       {menuOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 sm:hidden"
-          onClick={() => setMenuOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm sm:hidden"
+          onClick={closeMenu}
         />
       )}
     </>

@@ -3,65 +3,57 @@ import AnimatedCard from "@/components/AnimatedCard";
 
 export default function ProjetosPage() {
   return (
-    <section className="min-h-screen bg-[#0f0f0f] pb-24 px-6">
-      <div className="max-w-6xl mx-auto pt-20">
-
+    <section className="min-h-screen bg-[#0f0f0f] px-6 pb-24">
+      <div className="mx-auto max-w-6xl pt-20">
         <div className="mb-20 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-white">
+          <h1 className="text-4xl font-bold text-white md:text-5xl">
             Biblioteca de Projetos
           </h1>
 
-          <p className="text-gray-400 mt-6 max-w-2xl mx-auto">
+          <p className="mx-auto mt-6 max-w-2xl text-gray-400">
             Conjunto completo de sistemas e aplicações desenvolvidas.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project, index) => {
-
             const isDevelopment = project.status === "development";
-            const isPublished = project.status === "published";
 
             return (
               <AnimatedCard key={project.id} delay={index * 150}>
-                <div className="group h-full flex flex-col bg-[#1a1a1a] border border-white/10 rounded-xl p-6 transition-all duration-300 hover:-translate-y-2 hover:border-white/20">
-
+                <div className="group flex h-full flex-col rounded-xl border border-white/10 bg-[#1a1a1a] p-6 transition-all duration-300 hover:-translate-y-2 hover:border-white/20">
                   {isDevelopment && (
-                    <span className="inline-block text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full mb-4">
+                    <span className="mb-4 inline-block rounded-full bg-white/10 px-3 py-1 text-xs text-gray-300">
                       Em desenvolvimento
                     </span>
                   )}
 
-                  <h3 className="text-xl font-semibold text-white mb-3">
+                  <h3 className="mb-3 text-xl font-semibold text-white">
                     {project.title}
                   </h3>
 
-                  <p className="text-gray-400 mb-6">
-                    {project.description}
-                  </p>
+                  <p className="mb-6 text-gray-400">{project.description}</p>
 
-                  <div className="text-sm text-gray-500 mb-6">
+                  <div className="mb-6 text-sm text-gray-500">
                     {project.tech}
                   </div>
 
-                  {isPublished && project.link && (
+                  {project.link && (
                     <a
                       href={project.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white text-sm mt-auto relative inline-block"
+                      className="relative mt-auto inline-block text-sm text-white"
                     >
                       Acessar projeto →
-                      <span className="absolute left-0 -bottom-1 h-px w-0 bg-white transition-all duration-300 group-hover:w-full"></span>
+                      <span className="absolute -bottom-1 left-0 h-px w-0 bg-white transition-all duration-300 group-hover:w-full"></span>
                     </a>
                   )}
-
                 </div>
               </AnimatedCard>
             );
           })}
         </div>
-
       </div>
     </section>
   );
