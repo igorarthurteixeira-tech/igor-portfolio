@@ -145,7 +145,9 @@ export default function Home() {
               <h3 className="mb-2 text-xl font-semibold text-white">
                 Gestão da Tecnologia da Informação - em andamento
               </h3>
-              <p className="mb-4 text-sm text-gray-500">Estácio</p>
+              <p className="mb-4 text-base font-medium text-gray-300">
+                Estácio
+              </p>
               <p className="leading-relaxed text-gray-400">
                 Ênfase em gestão de sistemas, organização de processos, suporte
                 à operação e visão estratégica de tecnologia.
