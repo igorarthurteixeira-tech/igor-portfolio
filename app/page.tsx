@@ -75,8 +75,20 @@ export default function Home() {
         id="sobre"
         className="border-b border-white/5 bg-[#111111] px-5 pb-20 pt-20 sm:px-6 md:pb-24 md:pt-24"
       >
-        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2 md:gap-16">
-          <div>
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[220px_minmax(0,1fr)_340px] lg:items-start">
+          <div className="flex justify-center lg:justify-start">
+            <div className="h-44 w-44 overflow-hidden rounded-full border border-white/10 bg-[#161616] shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:h-52 sm:w-52">
+              <Image
+                src="/WhatsApp Image 2026-03-18 at 11.36.19.jpeg"
+                alt="Retrato de Igor Arthur"
+                width={700}
+                height={700}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </div>
+
+          <div className="text-center lg:text-left">
             <h2 className="mb-6 text-3xl font-bold text-white md:text-4xl">
               O que eu faço
             </h2>
@@ -97,7 +109,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-10">
+          <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-8">
             <h3 className="mb-4 text-xl font-semibold text-white">
               Áreas de atuação
             </h3>
