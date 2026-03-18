@@ -146,7 +146,7 @@ export default function Home() {
                 Gestão da Tecnologia da Informação - em andamento
               </h3>
               <p className="mb-4 text-base font-medium text-gray-300">
-                Estácio
+                Instituição de ensino: Faculdade Estácio
               </p>
               <p className="leading-relaxed text-gray-400">
                 Ênfase em gestão de sistemas, organização de processos, suporte
