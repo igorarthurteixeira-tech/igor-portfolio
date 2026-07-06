@@ -4,8 +4,27 @@ import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 
 export const metadata = {
+  metadataBase: new URL("https://igorarthurdev.com.br"),
   title: "Igor Arthur",
-  description: "Portfólio profissional",
+  description:
+    "Análise, arquitetura e construção de sistemas. Consultoria de fluxo, automação e programação full stack.",
+  openGraph: {
+    title: "Igor Arthur",
+    description:
+      "Análise, arquitetura e construção de sistemas. Consultoria de fluxo, automação e programação full stack.",
+    url: "https://igorarthurdev.com.br",
+    siteName: "Igor Arthur",
+    images: ["/banner.jpg"],
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Igor Arthur",
+    description:
+      "Análise, arquitetura e construção de sistemas. Consultoria de fluxo, automação e programação full stack.",
+    images: ["/banner.jpg"],
+  },
 };
 
 export default function RootLayout({

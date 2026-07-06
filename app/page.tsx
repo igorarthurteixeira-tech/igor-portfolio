@@ -9,7 +9,7 @@ export default function Home() {
     <>
       <section className="relative min-h-[90vh] w-full overflow-hidden pt-24 md:min-h-screen md:pt-28">
         <Image
-          src="/banner.png"
+          src="/banner.jpg"
           alt="Background"
           fill
           priority
@@ -79,7 +79,7 @@ export default function Home() {
           <div className="flex justify-center lg:justify-start">
             <div className="h-44 w-44 overflow-hidden rounded-full border border-white/10 bg-[#161616] shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:h-52 sm:w-52">
               <Image
-                src="/WhatsApp Image 2026-03-18 at 11.36.19.jpeg"
+                src="/perfil.jpg"
                 alt="Retrato de Igor Arthur"
                 width={700}
                 height={700}
