@@ -20,26 +20,26 @@ export default function Home() {
 
         <div className="relative z-10 flex h-full items-center justify-center px-6 text-center">
           <div className="max-w-4xl">
-            <p className="mb-4 text-sm font-medium uppercase tracking-[0.35em] text-gray-300">
-              Soluções sistêmicas para problemas reais
-            </p>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/30 px-4 py-2 text-sm font-medium text-gray-200">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              Disponível para novos projetos
+            </div>
 
             <h1 className="mb-4 text-4xl font-bold text-white sm:text-5xl md:mb-6 md:text-5xl lg:text-6xl">
-              Análise, arquitetura e construção de sistemas
+              Desenvolvo sistemas sob medida para o seu negócio
             </h1>
 
             <p className="mb-8 text-base text-gray-300 sm:text-lg md:mb-10 md:text-xl">
-              Atuação em consultoria de fluxo, automação, programação full stack
-              e desenvolvimento de sistemas sob medida para estruturar e
-              destravar operações.
+              Do mapeamento do processo ao sistema pronto: análise, automação
+              e programação full stack para resolver problemas reais.
             </p>
 
             <div className="mb-10 flex flex-wrap justify-center gap-3 text-sm text-gray-200">
               <span className="rounded-full border border-white/15 bg-black/30 px-4 py-2">
                 Análise de fluxo
-              </span>
-              <span className="rounded-full border border-white/15 bg-black/30 px-4 py-2">
-                Consultoria de sistemas
               </span>
               <span className="rounded-full border border-white/15 bg-black/30 px-4 py-2">
                 Automação
@@ -54,17 +54,19 @@ export default function Home() {
 
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <a
-                href="#projetos"
+                href="https://wa.me/5531983313504"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-lg bg-white px-8 py-4 text-black transition hover:opacity-80"
               >
-                Ver projetos
+                Chamar no WhatsApp
               </a>
 
               <a
-                href="#contato"
+                href="#projetos"
                 className="rounded-lg border border-gray-400 px-8 py-4 text-white transition hover:border-white"
               >
-                Contato
+                Ver projetos
               </a>
             </div>
           </div>
@@ -94,14 +96,18 @@ export default function Home() {
             </h2>
 
             <p className="mb-6 leading-relaxed text-gray-400">
-              Analiso fluxos, identifico gargalos operacionais e desenho
-              soluções técnicas mais claras para processos, sistemas e rotinas.
+              Analiso processos, encontro os gargalos e penso na solução
+              técnica mais simples e clara para resolver.
             </p>
 
-            <p className="leading-relaxed text-gray-400">
-              Desenvolvo aplicações full stack, automações e arquiteturas de
-              sistema com foco em organização, escalabilidade e aderência ao
-              problema real do negócio.
+            <p className="mb-6 leading-relaxed text-gray-400">
+              Desenvolvo aplicações full stack e automações com foco no que o
+              negócio realmente precisa, sem complicar.
+            </p>
+
+            <p className="leading-relaxed text-gray-300">
+              Estou com agenda aberta para novos projetos, de consultorias
+              pontuais a sistemas completos.
             </p>
 
             <div className="mt-8 text-sm text-gray-500">
@@ -115,11 +121,10 @@ export default function Home() {
             </h3>
 
             <ul className="space-y-4 text-sm text-gray-400">
-              <li>• Análise e consultoria de fluxo</li>
-              <li>• Consultoria de sistemas</li>
-              <li>• Automação de processos</li>
+              <li>• Análise de processos</li>
+              <li>• Automação</li>
               <li>• Programação full stack</li>
-              <li>• Construção e arquitetura de sistemas</li>
+              <li>• Arquitetura e construção de sistemas</li>
             </ul>
           </div>
         </div>
