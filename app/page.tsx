@@ -113,6 +113,13 @@ export default function Home() {
             <div className="mt-8 text-sm text-gray-500">
               Next.js • TypeScript • Tailwind • VBA • Automação
             </div>
+
+            <a
+              href="/api/curriculo"
+              className="mt-6 inline-flex items-center gap-2 text-sm text-gray-300 underline underline-offset-4 transition hover:text-white"
+            >
+              Baixar currículo (PDF) ↓
+            </a>
           </div>
 
           <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-8">
