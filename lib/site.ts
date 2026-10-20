@@ -87,8 +87,9 @@ export const site = {
       icone: "teste",
       quem: "Você",
       fase: 1,
+      vantagem: true,
       texto:
-        "Você usa uma versão do sistema por um período de teste, para ver se resolve de verdade.",
+        "Aqui está a sua grande vantagem: você usa o sistema por um período de teste e vê se faz mesmo sentido para você. Se não gostar, podemos ajustar ou refazer, a seu gosto. E se, pela experiência, concluir que não é o que planejava, até aqui você não paga nada.",
     },
     {
       titulo: "Aprovação",

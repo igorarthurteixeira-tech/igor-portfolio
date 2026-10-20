@@ -228,7 +228,7 @@ export default function Home() {
 
                 <ol
                   className={`grid gap-5 sm:grid-cols-2 ${
-                    f === 0 ? "lg:grid-cols-5" : "lg:grid-cols-3"
+                    f === 0 ? "lg:grid-cols-6" : "lg:grid-cols-3"
                   }`}
                 >
                   {etapas.map((etapa, i) => (
@@ -236,12 +236,15 @@ export default function Home() {
                       key={etapa.titulo}
                       delay={i * 90}
                       rootMargin={f === 1 ? "0px 0px -32% 0px" : undefined}
+                      className={etapa.vantagem ? "sm:col-span-2" : ""}
                     >
                       <li
                         className={`card card-hover relative flex h-full flex-col p-6 ${
                           etapa.destaque
                             ? "border-accent-strong bg-accent-strong/[0.06] ring-1 ring-accent-strong/40"
-                            : ""
+                            : etapa.vantagem
+                              ? "border-emerald-500 bg-emerald-50/70 ring-1 ring-emerald-500/40"
+                              : ""
                         }`}
                       >
                         <span className="absolute right-5 top-5 text-sm font-bold tabular-nums text-slate-300">
@@ -256,6 +259,11 @@ export default function Home() {
                         >
                           <IconeEtapa nome={etapa.icone} />
                         </span>
+                        {etapa.vantagem && (
+                          <span className="mb-2 w-fit rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
+                            Sua grande vantagem
+                          </span>
+                        )}
                         <h4 className="mb-2 text-lg font-semibold tracking-tight text-fg">
                           {etapa.titulo}
                         </h4>
