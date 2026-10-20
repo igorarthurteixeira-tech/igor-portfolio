@@ -89,7 +89,7 @@ export const site = {
       fase: 1,
       vantagem: true,
       texto:
-        "Aqui está a sua grande vantagem: você usa o sistema por um período de teste e vê se faz mesmo sentido para você. Se não gostar, podemos ajustar ou refazer, a seu gosto. E se, pela experiência, concluir que não é o que planejava, até aqui você não paga nada.",
+        "Você usa o sistema por um período de teste e vê se faz mesmo sentido para você.",
     },
     {
       titulo: "Aprovação",
@@ -117,6 +117,8 @@ export const site = {
         "Implemento o sistema no seu negócio e entrego funcionando.",
     },
   ],
+  comoVantagem:
+    "Aqui está a sua grande vantagem: você usa o sistema por um período de teste e vê se faz mesmo sentido para você. Se não gostar, podemos ajustar ou refazer, a seu gosto. E se, pela experiência, concluir que não é o que planejava, até aqui você não paga nada.",
   comoGarantias: [
     "Você testa o sistema antes de pagar.",
     "O pagamento só acontece depois da sua aprovação.",

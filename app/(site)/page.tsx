@@ -228,15 +228,15 @@ export default function Home() {
 
                 <ol
                   className={`grid gap-5 sm:grid-cols-2 ${
-                    f === 0 ? "lg:grid-cols-6" : "lg:grid-cols-3"
+                    f === 0 ? "lg:grid-cols-5" : "lg:grid-cols-3"
                   }`}
                 >
                   {etapas.map((etapa, i) => (
                     <AnimatedCard
                       key={etapa.titulo}
                       delay={i * 90}
-                      rootMargin={f === 1 ? "0px 0px -32% 0px" : undefined}
-                      className={etapa.vantagem ? "sm:col-span-2" : ""}
+                      rootMargin={f === 1 ? "0px 0px -20% 0px" : undefined}
+                      fantasma={f === 1}
                     >
                       <li
                         className={`card card-hover relative flex h-full flex-col p-6 ${
@@ -260,8 +260,8 @@ export default function Home() {
                           <IconeEtapa nome={etapa.icone} />
                         </span>
                         {etapa.vantagem && (
-                          <span className="mb-2 w-fit rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
-                            Sua grande vantagem
+                          <span className="mb-2 w-fit whitespace-nowrap rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
+                            Sua vantagem
                           </span>
                         )}
                         <h4 className="mb-2 text-lg font-semibold tracking-tight text-fg">
@@ -275,7 +275,7 @@ export default function Home() {
                     </AnimatedCard>
                   ))}
                   {f === 1 && (
-                    <AnimatedCard delay={200} rootMargin="0px 0px -32% 0px">
+                    <AnimatedCard delay={200} rootMargin="0px 0px -20% 0px" fantasma>
                       <li className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-brand p-6 text-white shadow-xl shadow-slate-900/20 sm:col-span-2 lg:col-span-1">
                         <div
                           aria-hidden
@@ -301,6 +301,21 @@ export default function Home() {
                     </AnimatedCard>
                   )}
                 </ol>
+                {f === 0 && (
+                  <AnimatedCard delay={150}>
+                    <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-emerald-500 bg-emerald-50/80 p-6 ring-1 ring-emerald-500/30 sm:flex-row sm:items-center">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white">
+                        <IconeEtapa nome="teste" />
+                      </span>
+                      <div>
+                        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+                          Sua grande vantagem
+                        </p>
+                        <p className="leading-relaxed text-fg">{site.comoVantagem}</p>
+                      </div>
+                    </div>
+                  </AnimatedCard>
+                )}
               </div>
             );
           })}

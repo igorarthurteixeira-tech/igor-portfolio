@@ -8,6 +8,7 @@ export default function AnimatedCard({
   className = "",
   id,
   rootMargin,
+  fantasma = false,
 }: {
   children: React.ReactNode;
   delay?: number;
@@ -15,6 +16,8 @@ export default function AnimatedCard({
   id?: string;
   /** Encolhe a área de ativação (ex.: "0px 0px -30% 0px" só revela quando entra mais no meio da tela). */
   rootMargin?: string;
+  /** Antes de aparecer, fica como um "fantasma" claro em vez de invisível (evita um buraco em branco). */
+  fantasma?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -42,7 +45,13 @@ export default function AnimatedCard({
       style={{ transitionDelay: `${delay}ms` }}
       className={`
         transition-all duration-700 ease-out ${className}
-        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}
+        ${
+          visible
+            ? "opacity-100 translate-y-0"
+            : fantasma
+              ? "opacity-[0.16] translate-y-4"
+              : "opacity-0 translate-y-6"
+        }
       `}
     >
       {children}
