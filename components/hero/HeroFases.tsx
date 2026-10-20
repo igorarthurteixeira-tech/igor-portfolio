@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react";
 
 /**
- * Só no celular/tablet: a hero começa com o texto grande; depois de uns
- * segundos o texto encolhe para o topo e os cartões dos projetos aparecem.
- * No computador nada disso acontece (as classes só valem abaixo de `lg`).
+ * Só no celular/tablet: a hero começa com o texto todo, em ordem normal. Depois
+ * de uns segundos o título encolhe e os cartões entram logo abaixo dele; a
+ * apresentação (subtítulo, botões e números) desce para baixo dos cartões.
+ * No computador as duas colunas ficam como sempre (as classes só valem abaixo de `lg`).
  */
 export default function HeroFases({
-  texto,
+  topo,
+  apresentacao,
   vitrine,
   atraso = 2800,
 }: {
-  texto: React.ReactNode;
+  topo: React.ReactNode;
+  apresentacao: React.ReactNode;
   vitrine: React.ReactNode;
   atraso?: number;
 }) {
@@ -27,22 +30,19 @@ export default function HeroFases({
   return (
     <div
       data-compacto={compacto}
-      className="group/hero relative z-10 mx-auto grid w-full max-w-6xl items-center gap-0 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14"
+      className="group/hero relative z-10 mx-auto flex w-full max-w-6xl flex-col lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:content-center lg:items-start lg:gap-x-14"
     >
-      <div className="text-center lg:text-left">{texto}</div>
+      <div className="order-1 text-center lg:col-start-1 lg:row-start-1 lg:text-left">{topo}</div>
 
-      {/* cartões: entram suavemente quando o texto encolhe */}
-      <div className="grid transition-[grid-template-rows,opacity] duration-700 ease-out max-lg:grid-rows-[0fr] max-lg:opacity-0 max-lg:group-data-[compacto=true]/hero:grid-rows-[1fr] max-lg:group-data-[compacto=true]/hero:opacity-100 lg:block">
-        <div className="min-h-0 overflow-hidden px-1 pb-2 pt-6 lg:overflow-visible lg:p-0">
+      {/* apresentação: 2ª no começo, desce para depois dos cartões quando eles aparecem */}
+      <div className="order-2 text-center max-lg:group-data-[compacto=true]/hero:order-3 max-lg:group-data-[compacto=true]/hero:animate-[apresentacao-desce_0.8s_ease-out_0.35s_both] lg:col-start-1 lg:row-start-2 lg:text-left">
+        {apresentacao}
+      </div>
+
+      {/* cartões: entram suavemente quando o título encolhe */}
+      <div className="order-3 grid transition-[grid-template-rows,opacity] duration-700 ease-out max-lg:grid-rows-[0fr] max-lg:opacity-0 max-lg:group-data-[compacto=true]/hero:order-2 max-lg:group-data-[compacto=true]/hero:grid-rows-[1fr] max-lg:group-data-[compacto=true]/hero:opacity-100 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block lg:self-center">
+        <div className="min-h-0 overflow-hidden px-1 pb-4 pt-5 lg:overflow-visible lg:p-0">
           {vitrine}
-          <div className="mt-4 text-center lg:hidden">
-            <button
-              onClick={() => setCompacto(false)}
-              className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-300 underline underline-offset-4 transition hover:text-white"
-            >
-              Ver apresentação
-            </button>
-          </div>
         </div>
       </div>
     </div>

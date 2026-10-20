@@ -54,53 +54,56 @@ export default function Home() {
         <HeroBackground />
 
         <HeroFases
-          texto={
+          topo={
             <>
-                <div className="mb-8 inline-flex items-center gap-2 max-lg:transition-all max-lg:duration-700 max-lg:group-data-[compacto=true]/hero:mb-3 rounded-full border border-white/25 bg-brand/60 px-4 py-2 text-sm font-medium text-white backdrop-blur">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-                  </span>
-                  Disponível para novos projetos
-                </div>
+              <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/25 bg-brand/60 px-4 py-2 text-sm font-medium text-white backdrop-blur max-lg:transition-all max-lg:duration-700 max-lg:group-data-[compacto=true]/hero:mb-3">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                Disponível para novos projetos
+              </div>
 
-                <h1 className={`mb-6 text-4xl font-bold leading-[1.12] tracking-tight text-white sm:text-5xl max-lg:transition-all max-lg:duration-700 max-lg:group-data-[compacto=true]/hero:mb-0 max-lg:group-data-[compacto=true]/hero:text-2xl`}>
-                  {site.heroTitulo.antes}
-                  <span className="text-gradient">{site.heroTitulo.destaque}</span>
-                  {site.heroTitulo.meio}
-                  <PalavraGiratoria variacoes={site.heroTitulo.variacoes} />
-                </h1>
+              <h1 className="mb-6 text-4xl font-bold leading-[1.12] tracking-tight text-white sm:text-5xl max-lg:transition-all max-lg:duration-700 max-lg:group-data-[compacto=true]/hero:mb-0 max-lg:group-data-[compacto=true]/hero:text-2xl">
+                {site.heroTitulo.antes}
+                <span className="text-gradient">{site.heroTitulo.destaque}</span>
+                {site.heroTitulo.meio}
+                <PalavraGiratoria variacoes={site.heroTitulo.variacoes} />
+              </h1>
+            </>
+          }
+          apresentacao={
+            <>
+              <p className="mx-auto mb-10 max-w-2xl text-base leading-relaxed text-slate-100 sm:text-lg lg:mx-0 lg:text-xl">
+                {site.subtitulo}
+              </p>
 
-                <p className="mx-auto mb-10 max-w-2xl text-base leading-relaxed text-slate-100 sm:text-lg lg:mx-0 lg:text-xl max-lg:overflow-hidden max-lg:transition-all max-lg:duration-700 max-lg:ease-out max-lg:max-h-60 max-lg:group-data-[compacto=true]/hero:mb-0 max-lg:group-data-[compacto=true]/hero:max-h-0 max-lg:group-data-[compacto=true]/hero:opacity-0">
-                  {site.subtitulo}
-                </p>
+              <div className="mb-12 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start">
+                <a
+                  href={site.contato.whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                >
+                  Chamar no WhatsApp
+                </a>
+                <a href="#projetos" className="btn-ghost">
+                  Ver projetos
+                </a>
+              </div>
 
-                <div className="mb-12 flex flex-col justify-center gap-3 sm:flex-row lg:justify-start max-lg:overflow-hidden max-lg:transition-all max-lg:duration-700 max-lg:ease-out max-lg:max-h-60 max-lg:group-data-[compacto=true]/hero:mb-0 max-lg:group-data-[compacto=true]/hero:max-h-0 max-lg:group-data-[compacto=true]/hero:opacity-0">
-                  <a
-                    href={site.contato.whatsappUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-primary"
-                  >
-                    Chamar no WhatsApp
-                  </a>
-                  <a href="#projetos" className="btn-ghost">
-                    Ver projetos
-                  </a>
-                </div>
-
-                <dl className="mx-auto grid max-w-md grid-cols-3 gap-4 border-t border-white/15 pt-6 lg:mx-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-700 max-lg:ease-out max-lg:max-h-60 max-lg:group-data-[compacto=true]/hero:max-h-0 max-lg:group-data-[compacto=true]/hero:border-transparent max-lg:group-data-[compacto=true]/hero:pt-0 max-lg:group-data-[compacto=true]/hero:opacity-0">
-                  {stats.map((s) => (
-                    <div key={s.rotulo} className="flex flex-col-reverse justify-end">
-                      <dt className="mt-1 text-xs leading-snug text-slate-300">
-                        {s.rotulo}
-                      </dt>
-                      <dd className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                        <Contador valor={s.valor} />
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
+              <dl className="mx-auto grid max-w-md grid-cols-3 gap-4 border-t border-white/15 pt-6 lg:mx-0">
+                {stats.map((s) => (
+                  <div key={s.rotulo} className="flex flex-col-reverse justify-end">
+                    <dt className="mt-1 text-xs leading-snug text-slate-300">
+                      {s.rotulo}
+                    </dt>
+                    <dd className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+                      <Contador valor={s.valor} />
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </>
           }
           vitrine={<HeroVitrine itens={vitrine} />}
