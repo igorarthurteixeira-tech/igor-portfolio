@@ -134,7 +134,7 @@ export const site = {
     },
     {
       periodo: "Formação complementar",
-      curso: "Curso de Programação Full Stack",
+      curso: "Programação Full Stack",
       instituicao: "b7Web",
       descricao:
         "Desenvolvimento de aplicações completas: interface, regras de negócio, banco de dados e a integração entre as partes.",
