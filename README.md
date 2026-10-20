@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# igor-portfolio
 
-## Getting Started
+Portfólio de Igor Arthur — https://igorarthurdev.com.br
 
-First, run the development server:
+Next.js 16 (App Router) · React 19 · Tailwind 4 · TypeScript · Supabase. Deploy na Vercel.
+
+## Rodando
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # preencha com as chaves do Supabase
+npm run dev                  # http://localhost:3000
+npm run build && npm start   # versão de produção
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Onde editar o conteúdo
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| O quê | Arquivo |
+| --- | --- |
+| Textos, contato, "como funciona", stack, formação | `lib/site.ts` |
+| Projetos (home, biblioteca e currículo) | `lib/projects.ts` |
+| Layout do currículo em PDF | `lib/CurriculoDocument.tsx` |
+| Cores e componentes de estilo | `app/globals.css` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+O currículo (`/api/curriculo`) e a home leem das mesmas fontes, então basta
+editar uma vez. Projetos com `featured: true` aparecem na home e no currículo.
+Para mostrar uma captura de tela, coloque a imagem em `public/projetos/` e
+preencha `image` no projeto.
 
-## Learn More
+## Chat, métricas e painel
 
-To learn more about Next.js, take a look at the following resources:
+- **Chat:** o balão no canto da tela conduz uma conversa (nome, e-mail, mensagem)
+  e grava em `mensagens`. O link "Contato" do menu abre o mesmo chat.
+- **Métricas:** `components/Tracker.tsx` registra visualizações e cliques em
+  `eventos` (sem IP; só um id de sessão anônimo). Para contar um clique que
+  não é link, use `data-track="nome"` no elemento.
+- **Painel:** `/admin` (login por e-mail e senha, só o `ADMIN_EMAIL`) mostra
+  números, gráfico, origem do tráfego e as mensagens.
+- **Banco:** o schema está em `supabase/migrations/`. Variáveis em `.env.example`.
+  As APIs públicas têm limite por IP (`lib/rate-limit.ts`).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estrutura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/page.tsx` — home
+- `app/projetos/page.tsx` — biblioteca completa
+- `app/admin/` — painel e login
+- `app/api/` — `mensagens`, `eventos` e `curriculo`
+- `components/ChatBubble.tsx` — balão e janela de chat
+- `proxy.ts` — protege `/admin`

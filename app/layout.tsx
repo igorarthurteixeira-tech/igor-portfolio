@@ -1,18 +1,21 @@
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import ScrollToTop from "@/components/ScrollToTop";
+import { Geist } from "next/font/google";
+import Tracker from "@/components/Tracker";
+import type { Metadata } from "next";
+import { site } from "@/lib/site";
 
-export const metadata = {
-  metadataBase: new URL("https://igorarthurdev.com.br"),
-  title: "Igor Arthur",
-  description:
-    "Análise, arquitetura e construção de sistemas. Consultoria de fluxo, automação e programação full stack.",
+export const metadata: Metadata = {
+  metadataBase: new URL(site.url),
+  title: {
+    default: "Igor Arthur | Sistemas sob medida",
+    template: "%s | Igor Arthur",
+  },
+  alternates: { canonical: "/" },
+  description: site.descricao,
   openGraph: {
     title: "Igor Arthur",
-    description:
-      "Análise, arquitetura e construção de sistemas. Consultoria de fluxo, automação e programação full stack.",
-    url: "https://igorarthurdev.com.br",
+    description: site.descricao,
+    url: site.url,
     siteName: "Igor Arthur",
     images: ["/banner.jpg"],
     locale: "pt_BR",
@@ -21,11 +24,12 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Igor Arthur",
-    description:
-      "Análise, arquitetura e construção de sistemas. Consultoria de fluxo, automação e programação full stack.",
+    description: site.descricao,
     images: ["/banner.jpg"],
   },
 };
+
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
 export default function RootLayout({
   children,
@@ -34,11 +38,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="flex min-h-screen flex-col bg-black text-white">
-        <Navbar />
-        <main className="grow pt-28">{children}</main>
-        <Footer />
-        <ScrollToTop />
+      <body className={geist.variable}>
+        {children}
+        <Tracker />
       </body>
     </html>
   );

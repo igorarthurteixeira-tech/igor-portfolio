@@ -1,13 +1,210 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  /* faixas escuras: menu, hero, rodapé, cartão de contato */
+  --color-brand: #040716;
+  /* áreas claras */
+  --color-page: #f5f7ff;
+  --color-page-2: #e3e9fb;
+  --color-fg: #070b1f;
+  --color-muted: #475569;
+  --color-line: #ccd5f0;
+  /* azul cobalto (da referência): vivo sobre escuro, forte sobre claro */
+  --color-accent: #0f46e6;
+  --color-accent-light: #5b8cff;
+  --color-accent-strong: #0a3bd1;
+}
+
 html {
   scroll-behavior: smooth;
 }
-html, body {
-  background-color: #0a0a0a;
-  color: #e5e5e5;
+
+html,
+body {
+  background-color: var(--color-page);
+  color: var(--color-fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: #2563eb;
-  color: white;
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+section[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply mb-3 inline-block text-xs font-semibold uppercase tracking-[0.22em] text-accent-strong;
+  }
+  .eyebrow-dark {
+    @apply mb-3 inline-block text-xs font-semibold uppercase tracking-[0.22em] text-accent-light;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold tracking-tight text-fg md:text-4xl;
+  }
+
+  .text-gradient {
+    background-image: linear-gradient(
+      100deg,
+      #60a5fa,
+      #22d3ee
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* cartão claro */
+  .card {
+    @apply rounded-2xl border border-line bg-white shadow-sm transition duration-300;
+  }
+  .card-hover:hover {
+    @apply -translate-y-1 border-accent-strong/50 shadow-xl shadow-slate-900/10;
+  }
+
+  /* botões sobre fundo escuro (hero, cartão de contato) */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-brand transition duration-200 hover:bg-blue-100 disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 px-7 py-3.5 text-sm font-semibold text-white transition duration-200 hover:border-white/60 hover:bg-white/10 disabled:opacity-50;
+  }
+  /* botões sobre fundo claro */
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-7 py-3.5 text-sm font-semibold text-white transition duration-200 hover:bg-accent-strong disabled:opacity-50;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-semibold text-fg transition duration-200 hover:border-slate-500 hover:bg-slate-50 disabled:opacity-50;
+  }
+
+  /* campos de formulário (login do painel) */
+  .field {
+    @apply w-full rounded-xl border border-line bg-white px-4 py-3 text-sm text-fg placeholder-slate-400 outline-none transition focus:border-accent-strong focus:ring-2 focus:ring-accent-strong/20;
+  }
+
+  .chip {
+    @apply rounded-full border border-line bg-page px-3 py-1 text-xs font-medium text-slate-700;
+  }
+  .chip-dark {
+    @apply rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white;
+  }
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.08) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* Hero: flutuação das janelas e brilho que segue o ponteiro */
+@keyframes hero-flutua {
+  from { transform: translateY(-7px); }
+  to { transform: translateY(9px); }
+}
+.hero-flutua-a { animation: hero-flutua 6s ease-in-out infinite alternate; }
+.hero-flutua-b { animation: hero-flutua 7.5s ease-in-out -2s infinite alternate; }
+.hero-flutua-c { animation: hero-flutua 5.5s ease-in-out -4s infinite alternate; }
+.hero-glow {
+  background: radial-gradient(
+    520px circle at var(--gx, 50%) var(--gy, 40%),
+    rgba(59, 130, 246, 0.3),
+    transparent 62%
+  );
+}
+
+/* Hero: o cartão da frente "pula" por cima dos outros ao ir para trás */
+@keyframes hero-pulo {
+  0% { transform: translateY(0) rotate(0deg); }
+  38% { transform: translateY(-34px) rotate(-3deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+.hero-pulo { animation: hero-pulo 0.9s ease-in-out; }
+
+/* Textura de pontos para fundos claros */
+.bg-pontos {
+  background-image: radial-gradient(rgb(37 99 235 / 0.2) 1.3px, transparent 1.3px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(ellipse at 50% 35%, #000 30%, transparent 80%);
+}
+
+/* ============================================================
+   Showroom: outro "site". Redefine paleta, tipografia e formas
+   só dentro do wrapper .showroom, sem tocar no portfólio.
+   ============================================================ */
+.showroom {
+  --color-brand: #121214;
+  --color-page: #f5f2ed;
+  --color-page-2: #e9e4db;
+  --color-fg: #17171a;
+  --color-muted: #5f5b55;
+  --color-line: #d9d2c5;
+  --color-accent: #e11d2e;
+  --color-accent-light: #ff5a66;
+  --color-accent-strong: #c8102e;
+  font-family: var(--font-barlow), system-ui, sans-serif;
+}
+.showroom :is(h1, h2) {
+  font-family: var(--font-oswald), Impact, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+.showroom h3 {
+  font-family: var(--font-oswald), Impact, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.showroom .card {
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgb(18 18 20 / 0.06);
+}
+.showroom .card-hover:hover {
+  border-color: var(--color-accent-strong);
+  box-shadow: 0 18px 40px -22px rgb(18 18 20 / 0.5);
+}
+.showroom .btn-primary,
+.showroom .btn-ghost,
+.showroom .btn-dark,
+.showroom .btn-outline {
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 500;
+  font-size: 0.82rem;
+}
+.showroom .btn-primary { background: var(--color-accent-strong); color: #fff; }
+.showroom .btn-primary:hover { background: var(--color-accent); }
+.showroom .btn-dark:hover { background: var(--color-accent-strong); }
+.showroom .field { border-radius: 4px; }
+.showroom .chip { border-radius: 3px; background: var(--color-page); }
+.showroom .eyebrow, .showroom .eyebrow-dark {
+  font-family: var(--font-oswald), sans-serif;
+  letter-spacing: 0.28em;
+}
+.showroom .bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
 }
