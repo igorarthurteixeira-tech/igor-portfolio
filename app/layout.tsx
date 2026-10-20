@@ -1,7 +1,7 @@
 import "./globals.css";
 import { Geist } from "next/font/google";
 import Tracker from "@/components/Tracker";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -27,6 +27,12 @@ export const metadata: Metadata = {
     description: site.descricao,
     images: ["/banner.jpg"],
   },
+};
+
+// cor da barra do navegador (celular) e das abas: igual ao menu escuro do site
+export const viewport: Viewport = {
+  themeColor: "#040716",
+  colorScheme: "light",
 };
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });

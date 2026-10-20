@@ -176,7 +176,7 @@ export default function Home() {
       </section>
 
       {/* COMO FUNCIONA */}
-      <section className="relative overflow-hidden border-y border-line bg-page-2 px-6 py-20 md:py-28">
+      <section id="como-contratar" className="relative overflow-hidden border-y border-line bg-page-2 px-6 py-20 md:py-28">
         <div aria-hidden className="bg-pontos pointer-events-none absolute inset-0" />
         <div
           aria-hidden

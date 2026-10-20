@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Barlow, Oswald } from "next/font/google";
 import CabecalhoLoja from "@/components/showroom/CabecalhoLoja";
@@ -6,6 +6,9 @@ import Marca from "@/components/showroom/Marca";
 
 const oswald = Oswald({ subsets: ["latin"], variable: "--font-oswald", weight: ["400", "500", "600"] });
 const barlow = Barlow({ subsets: ["latin"], variable: "--font-barlow", weight: ["400", "500", "600", "700"] });
+
+// o showroom é "outro site": a barra do navegador acompanha a faixa preta do topo
+export const viewport: Viewport = { themeColor: "#000000" };
 
 // Outro site: título, descrição e prévia próprios (nada do portfólio).
 export const metadata: Metadata = {

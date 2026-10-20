@@ -9,6 +9,7 @@ const social = [
 
 const nav = [
   { label: "Sobre", href: "/#sobre" },
+  { label: "Como contratar", href: "/#como-contratar" },
   { label: "Projetos", href: "/projetos" },
   { label: "Formação", href: "/#formacao" },
 ];

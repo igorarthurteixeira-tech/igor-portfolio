@@ -7,6 +7,7 @@ import { abrirChat as abrirChatGlobal } from "@/lib/chat";
 
 const links = [
   { href: "/#sobre", label: "Sobre" },
+  { href: "/#como-contratar", label: "Como contratar" },
   { href: "/#projetos", label: "Projetos" },
   { href: "/#formacao", label: "Formação" },
   { href: "/#contato", label: "Contato" },

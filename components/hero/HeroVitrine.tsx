@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -42,10 +42,36 @@ const ESPALHADO = [
 ];
 
 const INTERVALO = 3600;
+const LARGURA = 540;
+const ALTURA = 500;
 
 export default function HeroVitrine({ itens }: { itens: Item[] }) {
   const [ciclo, setCiclo] = useState(0);
   const [espalhado, setEspalhado] = useState(false);
+  const [escala, setEscala] = useState(1);
+  const raiz = useRef<HTMLDivElement>(null);
+  const tocou = useRef(false);
+
+  // o conjunto tem 540x500 px; em telas estreitas ele encolhe por inteiro (mesmas posições)
+  useEffect(() => {
+    const el = raiz.current;
+    if (!el) return;
+    const medir = () => setEscala(Math.min(1, el.clientWidth / LARGURA));
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // no toque não existe "passar o mouse": toque fora recolhe os cartões
+  useEffect(() => {
+    if (!espalhado) return;
+    const fora = (e: PointerEvent) => {
+      if (e.pointerType === "touch" && !raiz.current?.contains(e.target as Node)) setEspalhado(false);
+    };
+    document.addEventListener("pointerdown", fora);
+    return () => document.removeEventListener("pointerdown", fora);
+  }, [espalhado]);
 
   useEffect(() => {
     if (espalhado) return;
@@ -60,11 +86,20 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
 
   return (
     <div
-      className="relative mx-auto hidden h-[500px] w-full max-w-[540px] lg:block"
-      onPointerEnter={() => setEspalhado(true)}
-      onPointerLeave={() => setEspalhado(false)}
-      onFocus={() => setEspalhado(true)}
-      onBlur={() => setEspalhado(false)}
+      ref={raiz}
+      className="relative mx-auto w-full max-w-[540px]"
+      style={{ height: ALTURA * escala }}
+      onPointerDown={(e) => {
+        tocou.current = e.pointerType === "touch";
+      }}
+      onPointerEnter={(e) => e.pointerType !== "touch" && setEspalhado(true)}
+      onPointerLeave={(e) => e.pointerType !== "touch" && setEspalhado(false)}
+      onFocus={() => !tocou.current && setEspalhado(true)}
+      onBlur={() => !tocou.current && setEspalhado(false)}
+    >
+    <div
+      className="absolute left-1/2 top-0 origin-top"
+      style={{ width: LARGURA, height: ALTURA, transform: `translateX(-50%) scale(${escala})` }}
     >
       <div
         aria-hidden
@@ -94,6 +129,12 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
               <div className={`hero-flutua-${["a", "b", "c"][i]}`}>
                 <Link
                   href={`/projetos#${it.id}`}
+                  onClick={(e) => {
+                    if (tocou.current && !espalhado) {
+                      e.preventDefault();
+                      setEspalhado(true);
+                    }
+                  }}
                   aria-label={`Ver ${it.nome} na biblioteca de projetos`}
                   className="block overflow-hidden rounded-2xl border border-white/20 bg-brand shadow-2xl shadow-black/50 outline-none transition-shadow hover:border-white/50 hover:shadow-accent/30 focus-visible:ring-2 focus-visible:ring-accent-light"
                 >
@@ -128,6 +169,7 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
           </div>
         );
       })}
+    </div>
     </div>
   );
 }
