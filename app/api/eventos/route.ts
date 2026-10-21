@@ -4,6 +4,8 @@ import { permitir } from "@/lib/rate-limit";
 const BOTS = /bot|crawl|spider|slurp|preview|headless|lighthouse/i;
 
 export async function POST(request: Request) {
+  // testes locais e prévias não entram nas métricas reais
+  if (process.env.VERCEL_ENV !== "production") return new Response(null, { status: 204 });
   if (!permitir(request, "eventos", 240, 60_000)) {
     return new Response(null, { status: 429 });
   }

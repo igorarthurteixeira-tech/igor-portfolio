@@ -201,6 +201,20 @@ const todosOsProjetos: Project[] = [
       "Site de jogos retrô com conta de usuário e assinatura mensal via Stripe.",
     categoria: "jogo",
     image: "/projetos/retro-games-2.jpg",
+    galeria: [
+      {
+        src: "/projetos/retro-games-0-g.jpg",
+        legenda: "Página inicial, com o ranking de jogadores",
+        width: 1440,
+        height: 810,
+      },
+      {
+        src: "/projetos/retro-games-1-g.jpg",
+        legenda: "Catálogo de jogos gratuitos e premium",
+        width: 1440,
+        height: 810,
+      },
+    ],
     tech: "JavaScript • Supabase • Stripe • Vercel",
     link: "https://retrogames.app.br",
     featured: true,
@@ -235,31 +249,12 @@ const todosOsProjetos: Project[] = [
 
   // ----- Biblioteca -----
   {
-    id: "showroom",
-    title: "Showroom de veículos",
-    description:
-      "Vitrine de carros com filtros e ordenação, página de cada veículo com galeria, simulador de financiamento, formulário de interesse e painel de cadastro. Loja de demonstração, com marcas fictícias e fotos geradas por inteligência artificial.",
-    categoria: "web",
-    image: "/projetos/showroom-4.jpg",
-    tech: "Next.js • React • TypeScript • Tailwind",
-    link: "/showroom",
-    status: "published",
-  },
-  {
     id: "pedidos-restaurantes",
     title: "Plataforma de pedidos para restaurantes",
     description:
       "Pedidos para vários restaurantes, com cálculo de preço e taxa de entrega e roteirização das entregas.",
     categoria: "web",
-    image: "/projetos/pedidos-restaurantes-2.jpg",
-    galeria: [
-      {
-        src: "/projetos/pedidos-restaurantes-2.jpg",
-        legenda: "Lista de restaurantes",
-        width: 1440,
-        height: 810,
-      },
-    ],
+    image: "/projetos/pedidos-restaurantes-3.jpg",
     tech: "Next.js • Supabase • Google Maps",
     privado: true,
     status: "development",
@@ -270,15 +265,7 @@ const todosOsProjetos: Project[] = [
     description:
       "Aplicação web de conversas com inteligência artificial voltadas ao autoconhecimento, com contas de usuário e assinatura via Stripe (em modo de teste).",
     categoria: "web",
-    image: "/projetos/autoconhecimento-ia-2.jpg",
-    galeria: [
-      {
-        src: "/projetos/autoconhecimento-ia-2.jpg",
-        legenda: "Tela de entrada",
-        width: 1440,
-        height: 810,
-      },
-    ],
+    image: "/projetos/autoconhecimento-ia-3.jpg",
     tech: "Next.js • Firebase • Stripe • IA",
     privado: true,
     status: "development",
@@ -289,15 +276,7 @@ const todosOsProjetos: Project[] = [
     description:
       "Portal para gerenciar um curso paroquial com cerca de 160 participantes: cadastro em etapas, sala de aula, notas, frequência e controle de inscrições.",
     categoria: "web",
-    image: "/projetos/portal-de-curso-2.jpg",
-    galeria: [
-      {
-        src: "/projetos/portal-de-curso-2.jpg",
-        legenda: "Página inicial (logo e nome de exemplo)",
-        width: 1440,
-        height: 810,
-      },
-    ],
+    image: "/projetos/portal-de-curso-3.jpg",
     tech: "Next.js • Prisma • NextAuth • Neon",
     privado: true,
   },
@@ -307,15 +286,7 @@ const todosOsProjetos: Project[] = [
     description:
       "App para os músicos escolherem, de casa, as músicas de cada momento da missa. O sistema da paróquia busca as escolhas pela internet ao montar a celebração.",
     categoria: "web",
-    image: "/projetos/pedido-musicas-2.jpg",
-    galeria: [
-      {
-        src: "/projetos/pedido-musicas-2.jpg",
-        legenda: "Tela de acesso (logo e nome de exemplo)",
-        width: 1440,
-        height: 810,
-      },
-    ],
+    image: "/projetos/pedido-musicas-3.jpg",
     tech: "Next.js • TypeScript • PostgreSQL • Vercel",
     privado: true,
   },
@@ -384,6 +355,26 @@ const todosOsProjetos: Project[] = [
       "Loja online com carrinho global e fluxo de reserva com retirada na loja, em interface pensada para uma marca premium.",
     categoria: "web",
     image: "/projetos/sorveteria-2.jpg",
+    galeria: [
+      {
+        src: "/projetos/sorveteria-0-g.jpg",
+        legenda: "Página inicial",
+        width: 1440,
+        height: 810,
+      },
+      {
+        src: "/projetos/sorveteria-1-g.jpg",
+        legenda: "Sabores em destaque",
+        width: 1440,
+        height: 810,
+      },
+      {
+        src: "/projetos/sorveteria-3-g.jpg",
+        legenda: "Como funciona e reserva online",
+        width: 1440,
+        height: 810,
+      },
+    ],
     tech: "Next.js • React • TypeScript • Tailwind CSS • Context API",
     link: "https://sistema-para-gelateria-boutique.vercel.app/",
     status: "published",
@@ -395,6 +386,26 @@ const todosOsProjetos: Project[] = [
       "Plataforma institucional da Moradia Estudantil, desenvolvida em Next.js e publicada na Vercel.",
     categoria: "web",
     image: "/projetos/moradia-2.jpg",
+    galeria: [
+      {
+        src: "/projetos/moradia-0-g.jpg",
+        legenda: "Página inicial",
+        width: 1440,
+        height: 810,
+      },
+      {
+        src: "/projetos/moradia-1-g.jpg",
+        legenda: "Quartos disponíveis",
+        width: 1440,
+        height: 810,
+      },
+      {
+        src: "/projetos/moradia-2-g.jpg",
+        legenda: "Como funciona e contato",
+        width: 1440,
+        height: 810,
+      },
+    ],
     tech: "Next.js • UI/UX • Vercel",
     link: "https://moradia-estudantil-delta.vercel.app/",
     status: "published",
@@ -406,6 +417,20 @@ const todosOsProjetos: Project[] = [
       "Plataforma de análise do mercado automotivo, organizada em módulos para evoluir por etapas.",
     categoria: "web",
     image: "/projetos/marketdrive-2.jpg",
+    galeria: [
+      {
+        src: "/projetos/marketdrive-0-g.jpg",
+        legenda: "Página inicial",
+        width: 1440,
+        height: 810,
+      },
+      {
+        src: "/projetos/marketdrive-1-g.jpg",
+        legenda: "Proposta de valor e público",
+        width: 1440,
+        height: 810,
+      },
+    ],
     tech: "Next.js • TypeScript • Tailwind",
     link: "https://marketdrive-analytics.vercel.app/",
     status: "development",
@@ -471,7 +496,4 @@ const todosOsProjetos: Project[] = [
   },
 ];
 
-/** O showroom (em construção) só aparece quando NEXT_PUBLIC_SHOWROOM=1. */
-export const projects: Project[] = todosOsProjetos.filter(
-  (p) => p.id !== "showroom" || process.env.NEXT_PUBLIC_SHOWROOM === "1",
-);
+export const projects: Project[] = todosOsProjetos;

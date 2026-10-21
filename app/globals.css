@@ -148,67 +148,6 @@ section[id] {
   mask-image: radial-gradient(ellipse at 50% 35%, #000 30%, transparent 80%);
 }
 
-/* ============================================================
-   Showroom: outro "site". Redefine paleta, tipografia e formas
-   só dentro do wrapper .showroom, sem tocar no portfólio.
-   ============================================================ */
-.showroom {
-  --color-brand: #121214;
-  --color-page: #f5f2ed;
-  --color-page-2: #e9e4db;
-  --color-fg: #17171a;
-  --color-muted: #5f5b55;
-  --color-line: #d9d2c5;
-  --color-accent: #e11d2e;
-  --color-accent-light: #ff5a66;
-  --color-accent-strong: #c8102e;
-  font-family: var(--font-barlow), system-ui, sans-serif;
-}
-.showroom :is(h1, h2) {
-  font-family: var(--font-oswald), Impact, sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-weight: 600;
-}
-.showroom h3 {
-  font-family: var(--font-oswald), Impact, sans-serif;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-.showroom .card {
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgb(18 18 20 / 0.06);
-}
-.showroom .card-hover:hover {
-  border-color: var(--color-accent-strong);
-  box-shadow: 0 18px 40px -22px rgb(18 18 20 / 0.5);
-}
-.showroom .btn-primary,
-.showroom .btn-ghost,
-.showroom .btn-dark,
-.showroom .btn-outline {
-  border-radius: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: var(--font-oswald), sans-serif;
-  font-weight: 500;
-  font-size: 0.82rem;
-}
-.showroom .btn-primary { background: var(--color-accent-strong); color: #fff; }
-.showroom .btn-primary:hover { background: var(--color-accent); }
-.showroom .btn-dark:hover { background: var(--color-accent-strong); }
-.showroom .field { border-radius: 4px; }
-.showroom .chip { border-radius: 3px; background: var(--color-page); }
-.showroom .eyebrow, .showroom .eyebrow-dark {
-  font-family: var(--font-oswald), sans-serif;
-  letter-spacing: 0.28em;
-}
-.showroom .bg-grid {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
-}
-
 /* Hero no celular: a apresentação reaparece embaixo dos cartões */
 @keyframes apresentacao-desce {
   from { opacity: 0; transform: translateY(14px); }

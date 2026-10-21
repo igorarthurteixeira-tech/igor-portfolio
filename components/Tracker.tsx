@@ -16,6 +16,30 @@ function sessao() {
   }
 }
 
+const SITES = ["igorarthurdev.com.br", "www.igorarthurdev.com.br"];
+
+/** Não conta o dono do site (aparelhos que já abriram o painel) nem testes fora do endereço oficial. */
+function ignorar() {
+  try {
+    if (!SITES.includes(window.location.hostname)) return true;
+    return localStorage.getItem("sem-metrica") === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Cada página conta uma vez por sessão: recarregar ou voltar não infla. */
+function jaContou(caminho: string) {
+  try {
+    const chave = `v:${caminho}`;
+    if (sessionStorage.getItem(chave)) return true;
+    sessionStorage.setItem(chave, "1");
+  } catch {
+    // sem sessionStorage: conta normalmente
+  }
+  return false;
+}
+
 function enviar(dados: Record<string, unknown>) {
   const corpo = JSON.stringify({ ...dados, sessao: sessao() });
   try {
@@ -32,7 +56,15 @@ export default function Tracker() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
+    if (pathname.startsWith("/admin")) {
+      try {
+        localStorage.setItem("sem-metrica", "1");
+      } catch {
+        // ignorar
+      }
+      return;
+    }
+    if (ignorar() || jaContou(pathname)) return;
     enviar({
       tipo: "view",
       caminho: pathname,
@@ -43,7 +75,7 @@ export default function Tracker() {
   useEffect(() => {
     function aoClicar(e: MouseEvent) {
       const el = (e.target as HTMLElement).closest<HTMLElement>("a, button");
-      if (!el || window.location.pathname.startsWith("/admin")) return;
+      if (!el || window.location.pathname.startsWith("/admin") || ignorar()) return;
       const alvo =
         el.dataset.track ||
         (el instanceof HTMLAnchorElement ? el.getAttribute("href") : null);
