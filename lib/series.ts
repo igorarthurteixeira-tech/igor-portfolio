@@ -66,6 +66,17 @@ export const series: Serie[] = [
         estreia: "2026-10-24T12:00:00-03:00",
         arquivoLocal: "/series/padaria-da-rosa-ep2.mp4",
       },
+      {
+        numero: 3,
+        titulo: "O caderninho do fiado",
+        resumo:
+          "O Seu Zé jura que pagou, o caderninho do fiado está encharcado de café e o Beto, claro, tenta ajudar.",
+        duracao: "0:48",
+        poster: "/series/padaria-da-rosa-ep3.jpg",
+        youtubeId: "jr08LS6VxAE",
+        estreia: "2026-10-25T12:00:00-03:00",
+        arquivoLocal: "/series/padaria-da-rosa-ep3.mp4",
+      },
     ],
   },
 ];
