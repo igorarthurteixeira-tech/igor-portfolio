@@ -5,7 +5,25 @@ import Logo from "./Logo";
 import Link from "next/link";
 import { abrirChat as abrirChatGlobal } from "@/lib/chat";
 
-const links = [
+function RotuloLink({ label, play }: { label: string; play?: boolean }) {
+  if (!play) return <>{label}</>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {label}
+      <svg
+        viewBox="0 0 24 24"
+        className="h-4 w-4 text-accent-light"
+        fill="currentColor"
+        aria-hidden
+      >
+        <path d="M6 3.5v17a1 1 0 001.5.9l14-8.5a1 1 0 000-1.8l-14-8.5A1 1 0 006 3.5z" />
+      </svg>
+    </span>
+  );
+}
+
+const links: { href: string; label: string; play?: boolean }[] = [
+  { href: "/#vida-de-dono", label: "Vida de Dono", play: true },
   { href: "/#sobre", label: "Sobre" },
   { href: "/#como-contratar", label: "Como contratar" },
   { href: "/#projetos", label: "Projetos" },
@@ -35,6 +53,17 @@ export default function Navbar() {
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
+
+  /** Na home, rola até a seção mesmo que o endereço já tenha essa âncora (o Next não rola nesse caso). */
+  const irParaSecao = (e: React.MouseEvent, href: string) => {
+    close();
+    if (window.location.pathname !== "/") return;
+    const alvo = document.getElementById(href.replace("/#", ""));
+    if (!alvo) return;
+    e.preventDefault();
+    alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+    history.replaceState(null, "", href.slice(1));
+  };
   const abrirChat = () => {
     setMenuOpen(false);
     abrirChatGlobal();
@@ -69,9 +98,10 @@ export default function Navbar() {
               <Link
                 key={l.href}
                 href={l.href}
+                onClick={(e) => irParaSecao(e, l.href)}
                 className="rounded-lg px-3 py-2 text-slate-200 transition hover:bg-white/10 hover:text-white"
               >
-                {l.label}
+                <RotuloLink label={l.label} play={l.play} />
               </Link>
             ),
           )}
@@ -128,10 +158,10 @@ export default function Navbar() {
                 <Link
                   key={l.href}
                   href={l.href}
-                  onClick={close}
+                  onClick={(e) => irParaSecao(e, l.href)}
                   className="rounded-lg px-3 py-3 text-slate-200 transition hover:bg-white/10 hover:text-white"
                 >
-                  {l.label}
+                  <RotuloLink label={l.label} play={l.play} />
                 </Link>
               ),
             )}

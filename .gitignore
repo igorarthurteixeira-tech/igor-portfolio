@@ -44,3 +44,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# vídeos da série usados só no desenvolvimento (em produção vêm do YouTube)
+/public/series/*.mp4

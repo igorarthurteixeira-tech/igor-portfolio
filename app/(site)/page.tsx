@@ -13,6 +13,7 @@ import Contador from "@/components/hero/Contador";
 import TeclasSecoes from "@/components/TeclasSecoes";
 import IconeEtapa from "@/components/IconeEtapa";
 import BotaoChat from "@/components/BotaoChat";
+import SecaoSeries from "@/components/series/SecaoSeries";
 
 export default function Home() {
   const featuredProjects = projects.filter((project) => project.featured);
@@ -109,6 +110,9 @@ export default function Home() {
           vitrine={<HeroVitrine itens={vitrine} />}
         />
       </HeroStage>
+
+      {/* VIDA DE DONO: séries de ficção */}
+      <SecaoSeries />
 
       {/* SOBRE: claro */}
       <section id="sobre" className="bg-page px-5 py-20 sm:px-6 md:py-28">

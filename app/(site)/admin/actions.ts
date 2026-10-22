@@ -44,3 +44,15 @@ export async function excluirMensagem(id: string) {
   await supabaseAdmin()?.from("mensagens").delete().eq("id", id);
   revalidatePath("/admin");
 }
+
+export async function moderarComentario(id: string, aprovado: boolean) {
+  if (!(await getAdminUser())) return;
+  await supabaseAdmin()?.from("serie_comentarios").update({ aprovado }).eq("id", id);
+  revalidatePath("/admin");
+}
+
+export async function excluirComentario(id: string) {
+  if (!(await getAdminUser())) return;
+  await supabaseAdmin()?.from("serie_comentarios").delete().eq("id", id);
+  revalidatePath("/admin");
+}
