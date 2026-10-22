@@ -32,10 +32,68 @@ export type Serie = {
   chamada: string;
   descricao: string;
   capa: string;
+  /** Série em destaque na home (maior, com selo "Nova série"). */
+  destaque?: boolean;
   episodios: Episodio[];
 };
 
 export const series: Serie[] = [
+  {
+    slug: "expediente",
+    titulo: "Expediente",
+    chamada: "Uma planilha, seis pessoas e zero backup.",
+    descricao:
+      "Num escritório comum, uma planilha que ninguém ousa trocar trava, perde dados e atrasa as entregas. Entre a gerente, o dono, o estagiário e o criador da planilha, só o TI parece calmo. Cinco episódios de confusão, ameaças de demissão e uma virada.",
+    capa: "/series/expediente-capa.jpg",
+    destaque: true,
+    episodios: [
+      {
+        numero: 1,
+        titulo: "Salvando… 99%",
+        resumo:
+          "A planilha trava, o Seu Sérgio jura que funciona e a gerente ameaça o emprego da Camila.",
+        duracao: "1:27",
+        poster: "/series/expediente-ep1.jpg",
+        estreia: "2026-10-26T12:00:00-03:00",
+      },
+      {
+        numero: 2,
+        titulo: "O gargalo",
+        resumo:
+          "Trezentas e oitenta linhas copiadas à mão, três versões do mesmo arquivo e uma mensagem enviada ao grupo errado.",
+        duracao: "1:34",
+        poster: "/series/expediente-ep2.jpg",
+        estreia: "2026-10-27T12:00:00-03:00",
+      },
+      {
+        numero: 3,
+        titulo: "A cagada",
+        resumo:
+          "Faltam dois minutos para o prazo e o Kevin apaga o arquivo. O dono demite o estagiário, que nem registro tem.",
+        duracao: "1:20",
+        poster: "/series/expediente-ep3.jpg",
+        estreia: "2026-10-28T12:00:00-03:00",
+      },
+      {
+        numero: 4,
+        titulo: "Pânico",
+        resumo:
+          "O backup é de março, o cliente cancela e o dono demite todo mundo. Menos o Tadeu, calmo demais.",
+        duracao: "1:26",
+        poster: "/series/expediente-ep4.jpg",
+        estreia: "2026-10-29T12:00:00-03:00",
+      },
+      {
+        numero: 5,
+        titulo: "Estava tudo salvo",
+        resumo:
+          "O Tadeu mostra o chamado que o dono arquivou em março e o sistema que guardou tudo até 17h57.",
+        duracao: "1:38",
+        poster: "/series/expediente-ep5.jpg",
+        estreia: "2026-10-30T12:00:00-03:00",
+      },
+    ],
+  },
   {
     slug: "padaria-da-rosa",
     titulo: "A Padaria da Rosa",

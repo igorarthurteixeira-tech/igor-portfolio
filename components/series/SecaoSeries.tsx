@@ -1,18 +1,99 @@
 import Image from "next/image";
 import Link from "next/link";
-import { series } from "@/lib/series";
+import { diaDaEstreia, series, type Serie } from "@/lib/series";
 import AnimatedCard from "@/components/AnimatedCard";
 
-/** Balões decorativos (só quando sobra espaço ao lado dos cartões). */
-const baloes = [
-  { texto: "qual é a versão certa?", classe: "right-[8%] top-[14%] -rotate-3", anim: "hero-flutua-a", verde: false },
-  { texto: "cadê o pedido do João?", classe: "right-[2%] top-[34%] rotate-2", anim: "hero-flutua-b", verde: true },
-  { texto: "BETO.", classe: "right-[22%] top-[52%] -rotate-2", anim: "hero-flutua-c", verde: true },
-  { texto: "kkkkk qual senha", classe: "right-[6%] top-[70%] rotate-3", anim: "hero-flutua-a", verde: false },
-];
+function Selo({ n }: { n: number }) {
+  return (
+    <span className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+      <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor" aria-hidden>
+        <path d="M6 4l14 8-14 8z" />
+      </svg>
+      {n} {n === 1 ? "episódio" : "episódios"}
+    </span>
+  );
+}
 
-/** Seção da home com um cartão por série. */
+/** Série em destaque: ocupa duas colunas, com selo "Nova série" e as datas de estreia. */
+function CartaoDestaque({ s }: { s: Serie }) {
+  const eps = s.episodios;
+  const ini = diaDaEstreia(eps[0]);
+  const fim = diaDaEstreia(eps[eps.length - 1]);
+  return (
+    <Link
+      href={`/vida-de-dono/${s.slug}`}
+      data-track={`serie:${s.slug}`}
+      className="card card-hover group grid overflow-hidden border-accent-light/50 shadow-2xl shadow-accent/30 ring-1 ring-accent-light/30 md:grid-cols-[1.45fr_1fr]"
+    >
+      <div className="relative aspect-video w-full overflow-hidden bg-brand">
+        <Image
+          src={s.capa}
+          alt={`Capa da série ${s.titulo}`}
+          fill
+          sizes="(min-width:1024px) 700px, 100vw"
+          className="object-cover transition duration-500 group-hover:scale-[1.03]"
+        />
+        <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-[#ffe14d] px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[0.14em] text-brand shadow-lg">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand/60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-brand" />
+          </span>
+          Nova série
+        </span>
+        <Selo n={eps.length} />
+      </div>
+      <div className="flex flex-col justify-center p-7 md:p-8">
+        {ini && fim && (
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-accent-strong">
+            Estreia {ini} · um episódio por dia até {fim}
+          </p>
+        )}
+        <h3 className="mb-3 text-3xl font-bold tracking-tight text-fg">{s.titulo}</h3>
+        <p className="text-base leading-relaxed text-muted">{s.chamada}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Planilha que trava, estagiário que apaga tudo, ameaças de demissão e o TI que previu cada passo.
+        </p>
+        <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-strong">
+          Ver episódios
+          <span aria-hidden className="transition group-hover:translate-x-1">→</span>
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function CartaoSerie({ s }: { s: Serie }) {
+  return (
+    <Link
+      href={`/vida-de-dono/${s.slug}`}
+      data-track={`serie:${s.slug}`}
+      className="card card-hover group block overflow-hidden border-white/15 shadow-2xl shadow-black/40"
+    >
+      <div className="relative aspect-video w-full overflow-hidden bg-brand">
+        <Image
+          src={s.capa}
+          alt={`Capa da série ${s.titulo}`}
+          fill
+          sizes="(min-width:1024px) 380px, (min-width:640px) 50vw, 100vw"
+          className="object-cover transition duration-500 group-hover:scale-[1.03]"
+        />
+        <Selo n={s.episodios.length} />
+      </div>
+      <div className="p-6">
+        <h3 className="mb-2 text-xl font-semibold text-fg">{s.titulo}</h3>
+        <p className="text-sm leading-relaxed text-muted">{s.chamada}</p>
+        <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-strong">
+          Ver episódios
+          <span aria-hidden className="transition group-hover:translate-x-1">→</span>
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+/** Seção da home com um cartão por série (a série em destaque vem primeiro). */
 export default function SecaoSeries() {
+  const ordenadas = [...series].sort((a, b) => Number(!!b.destaque) - Number(!!a.destaque));
   return (
     <section
       id="vida-de-dono"
@@ -28,26 +109,6 @@ export default function SecaoSeries() {
         className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-accent-light/20 blur-[130px]"
       />
 
-      {series.length < 3 && (
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 lg:block">
-          {baloes.map((b) => (
-            <div key={b.texto} className={`absolute ${b.classe}`}>
-              <div className={b.anim}>
-                <span
-                  className={`block rounded-2xl border px-5 py-3 text-base font-medium backdrop-blur-sm ${
-                    b.verde
-                      ? "border-emerald-300/25 bg-emerald-400/15 text-emerald-100"
-                      : "border-white/15 bg-white/10 text-slate-200"
-                  }`}
-                >
-                  {b.texto}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-12 max-w-2xl">
           <p className="eyebrow-dark">Séries de ficção</p>
@@ -60,38 +121,10 @@ export default function SecaoSeries() {
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {series.map((s, i) => (
-            <AnimatedCard key={s.slug} delay={i * 120}>
-              <Link
-                href={`/vida-de-dono/${s.slug}`}
-                data-track={`serie:${s.slug}`}
-                className="card card-hover group block overflow-hidden border-white/15 shadow-2xl shadow-black/40"
-              >
-                <div className="relative aspect-video w-full overflow-hidden bg-brand">
-                  <Image
-                    src={s.capa}
-                    alt={`Capa da série ${s.titulo}`}
-                    fill
-                    sizes="(min-width:1024px) 380px, (min-width:640px) 50vw, 100vw"
-                    className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                  />
-                  <span className="absolute bottom-4 right-4 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
-                    <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor" aria-hidden>
-                      <path d="M6 4l14 8-14 8z" />
-                    </svg>
-                    {s.episodios.length} {s.episodios.length === 1 ? "episódio" : "episódios"}
-                  </span>
-                </div>
-                <div className="p-6">
-                  <h3 className="mb-2 text-xl font-semibold text-fg">{s.titulo}</h3>
-                  <p className="text-sm leading-relaxed text-muted">{s.chamada}</p>
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-strong">
-                    Ver episódios
-                    <span aria-hidden className="transition group-hover:translate-x-1">→</span>
-                  </span>
-                </div>
-              </Link>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {ordenadas.map((s, i) => (
+            <AnimatedCard key={s.slug} delay={i * 120} className={s.destaque ? "lg:col-span-3" : ""}>
+              {s.destaque ? <CartaoDestaque s={s} /> : <CartaoSerie s={s} />}
             </AnimatedCard>
           ))}
         </div>

@@ -211,6 +211,9 @@ export default async function AdminPage({
           <p className="mt-1 text-sm text-slate-500">{user.email}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link href="/admin/publicacoes" className="btn-outline px-4! py-2!">
+            Publicações
+          </Link>
           <Link href="/" className="btn-outline px-4! py-2!">
             Ver site
           </Link>
