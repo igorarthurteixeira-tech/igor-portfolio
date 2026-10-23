@@ -182,3 +182,12 @@ export async function publicarAgora(id: string, rede: string): Promise<Resultado
   revalidatePath("/admin/publicacoes");
   return { ok: true, mensagem: r.mensagem, estado: r.estado };
 }
+
+/** Consulta rápida (sem esperar muito) para um vídeo que o Instagram ainda está processando. */
+export async function verificarRede(id: string, rede: string): Promise<Resultado<{ mensagem: string; estado: string }>> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  if (rede !== "instagram") return { ok: false, erro: "Rede inválida." };
+  const r = await executarRede(id, rede as RedeId, 8_000);
+  revalidatePath("/admin/publicacoes");
+  return { ok: true, mensagem: r.mensagem, estado: r.estado };
+}

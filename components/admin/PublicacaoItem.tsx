@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   REDES,
   concluida,
@@ -15,6 +16,7 @@ import {
   linkDoArquivo,
   marcarRede,
   publicarAgora,
+  verificarRede,
 } from "@/app/(site)/admin/publicacoes/actions";
 
 const COR: Record<StatusRede, string> = {
@@ -33,6 +35,26 @@ const ROTULO: Record<StatusRede, string> = {
 export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conectadas: RedeId[] }) {
   const [pendente, iniciar] = useTransition();
   const [aviso, setAviso] = useState<string | null>(null);
+  const router = useRouter();
+  const consultando = useRef(false);
+  const esperaInstagram = p.status_redes.instagram === "processando";
+
+  // Enquanto o Instagram processa o vídeo, confere sozinho a cada 15 s e publica quando terminar.
+  useEffect(() => {
+    if (!esperaInstagram) return;
+    let tentativas = 0;
+    const id = setInterval(async () => {
+      if (consultando.current || ++tentativas > 80) return;
+      consultando.current = true;
+      try {
+        const r = await verificarRede(p.id, "instagram");
+        if (r.ok && r.estado !== "processando") router.refresh();
+      } finally {
+        consultando.current = false;
+      }
+    }, 15000);
+    return () => clearInterval(id);
+  }, [esperaInstagram, p.id, router]);
   const botao =
     "rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50";
 
@@ -124,6 +146,11 @@ export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conec
               )}
               {status === "erro" && det?.erro && (
                 <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{det.erro}</p>
+              )}
+              {r.id === "instagram" && status === "processando" && (
+                <p className="mt-2 text-xs text-sky-700">
+                  Aguardando o Instagram processar o vídeo. O painel confere sozinho e publica quando terminar.
+                </p>
               )}
               {det?.aviso && (
                 <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{det.aviso}</p>
