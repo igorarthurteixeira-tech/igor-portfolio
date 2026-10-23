@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { diasRestantes, type Conexao } from "@/lib/publicacoes";
-import { conectarInstagram, desconectarRede } from "@/app/(site)/admin/publicacoes/actions";
+import { conectarInstagram, desconectarRede, organizarPlaylists } from "@/app/(site)/admin/publicacoes/actions";
 
 export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
   const router = useRouter();
@@ -43,6 +43,7 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
     : null;
   const [token, setToken] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [playlists, setPlaylists] = useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = useTransition();
   const dias = diasRestantes(insta?.expira_em ?? null);
 
@@ -162,6 +163,28 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
           <p className={`mt-2 text-sm ${aviso.ok ? "text-emerald-700" : "text-red-600"}`} role="status">
             {aviso.texto}
           </p>
+        )}
+        {yt && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+              disabled={pendente}
+              onClick={() =>
+                iniciar(async () => {
+                  const r = await organizarPlaylists();
+                  setPlaylists(r.ok ? { ok: true, texto: r.mensagem } : { ok: false, texto: r.erro });
+                  router.refresh();
+                })
+              }
+            >
+              Organizar playlists das séries
+            </button>
+            {playlists && (
+              <span className={`text-xs ${playlists.ok ? "text-emerald-700" : "text-red-600"}`} role="status">
+                {playlists.texto}
+              </span>
+            )}
+          </div>
         )}
         <p className="mt-2 text-xs text-slate-500">
           Enquanto o projeto do Google não passar pela auditoria, os vídeos enviados ficam privados e você muda a

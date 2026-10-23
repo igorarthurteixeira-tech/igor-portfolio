@@ -6,6 +6,8 @@ import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import * as ig from "@/lib/redes/instagram";
 import { executarRede } from "@/lib/redes/executar";
+import { colocarNaPlaylist } from "@/lib/redes/playlists";
+import * as yt from "@/lib/redes/youtube";
 import { series } from "@/lib/series";
 import type { EpMeta } from "@/lib/series-videos";
 import {
@@ -376,4 +378,56 @@ export async function salvarAgendaSerie(slug: string, texto: string): Promise<Re
   revalidatePath("/");
   revalidatePath(`/vida-de-dono/${slug}`);
   return { ok: true };
+}
+
+/** Cria as playlists das séries e coloca nelas os vídeos já publicados no YouTube (só os que ainda não estão). */
+export async function organizarPlaylists(): Promise<Resultado<{ mensagem: string }>> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+
+  const { data: con } = await db.from("redes_conexoes").select("token").eq("rede", "youtube").maybeSingle();
+  if (!con) return { ok: false, erro: "O YouTube não está conectado." };
+  let acesso: string;
+  try {
+    acesso = await yt.tokenDeAcesso(con.token as string);
+  } catch (e) {
+    return { ok: false, erro: e instanceof Error ? e.message : "Falha ao acessar o YouTube." };
+  }
+
+  const { data } = await db
+    .from("publicacoes")
+    .select("id,episodio,status_redes,detalhes_redes")
+    .not("episodio", "is", null);
+  const pendentes = (data ?? [])
+    .filter((p) => {
+      const d = (p.detalhes_redes as { youtube?: { media_id?: string; na_playlist?: boolean } } | null)?.youtube;
+      return (p.status_redes as { youtube?: string } | null)?.youtube === "publicado" && !!d?.media_id && !d.na_playlist;
+    })
+    .sort((a, b) => String(a.episodio).localeCompare(String(b.episodio), "pt-BR", { numeric: true }));
+
+  let feitos = 0;
+  const erros: string[] = [];
+  for (const p of pendentes) {
+    const detalhes = p.detalhes_redes as Record<string, Record<string, unknown>>;
+    try {
+      await colocarNaPlaylist(db, acesso, p.episodio as string, detalhes.youtube.media_id as string);
+      await db
+        .from("publicacoes")
+        .update({ detalhes_redes: { ...detalhes, youtube: { ...detalhes.youtube, na_playlist: true } } })
+        .eq("id", p.id);
+      feitos++;
+    } catch (e) {
+      erros.push(`${p.episodio}: ${e instanceof Error ? e.message : "erro"}`);
+      break; // o mesmo problema (permissão) se repetiria nos próximos
+    }
+  }
+  revalidatePath("/admin", "layout");
+  if (erros.length) {
+    return { ok: false, erro: `${feitos} organizado(s). ${erros[0]}. Se for permissão, use "Reconectar com o Google".` };
+  }
+  return {
+    ok: true,
+    mensagem: pendentes.length === 0 ? "Nada a organizar: todos os vídeos já estão nas playlists." : `${feitos} vídeo(s) colocado(s) nas playlists das séries.`,
+  };
 }

@@ -10,6 +10,7 @@ import {
 import * as ig from "./instagram";
 import * as yt from "./youtube";
 import * as li from "./linkedin";
+import { colocarNaPlaylist } from "./playlists";
 
 type Db = NonNullable<ReturnType<typeof supabaseAdmin>>;
 
@@ -179,7 +180,18 @@ export async function executarYoutube(id: string): Promise<Resultado> {
         aviso = `${aviso ? `${aviso} ` : ""}${e instanceof Error ? e.message : "Capa não aplicada."}`;
       }
     }
+    let naPlaylist = false;
+    if (pub.episodio) {
+      try {
+        await colocarNaPlaylist(db, acesso, pub.episodio, envio.id);
+        naPlaylist = true;
+      } catch (e) {
+        const motivo = e instanceof Error ? e.message : "Não foi possível colocar na playlist.";
+        aviso = `${aviso ? `${aviso} ` : ""}Playlist: ${motivo} Reconecte o YouTube no painel para liberar as playlists.`;
+      }
+    }
     await salvar(db, id, "youtube", "publicado", {
+      na_playlist: naPlaylist,
       media_id: envio.id,
       permalink: `https://youtu.be/${envio.id}`,
       publicado_em: new Date().toISOString(),

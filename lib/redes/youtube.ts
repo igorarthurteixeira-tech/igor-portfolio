@@ -3,7 +3,13 @@ const TOKEN = "https://oauth2.googleapis.com/token";
 const UPLOAD = "https://www.googleapis.com/upload/youtube/v3";
 
 // Só envio de vídeos (e, para mostrar a conta, o e-mail). Nada de leitura do canal.
-const ESCOPOS = ["https://www.googleapis.com/auth/youtube.upload", "openid", "email"];
+// "youtube" (gerenciar o canal) também cria playlists; "youtube.upload" fica por garantia.
+const ESCOPOS = [
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/youtube",
+  "openid",
+  "email",
+];
 
 export const URL_RETORNO =
   process.env.YOUTUBE_REDIRECT_URI ?? "https://www.igorarthurdev.com.br/api/redes/youtube/retorno";
@@ -130,4 +136,30 @@ export async function definirCapa(acesso: string, videoId: string, imagem: Array
     body: imagem,
   });
   if (!r.ok) throw new Error(await erroDaApi(r, "Capa não aplicada"));
+}
+
+const API = "https://www.googleapis.com/youtube/v3";
+
+/** Cria uma playlist pública e devolve o id. Exige a permissão "youtube" (reconectar o Google). */
+export async function criarPlaylist(acesso: string, titulo: string, descricao: string) {
+  const r = await fetch(`${API}/playlists?part=snippet,status`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${acesso}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      snippet: { title: titulo.slice(0, 150), description: descricao.slice(0, 4900) },
+      status: { privacyStatus: "public" },
+    }),
+  });
+  if (!r.ok) throw new Error(await erroDaApi(r, "O YouTube recusou criar a playlist"));
+  return (await r.json()).id as string;
+}
+
+/** Coloca um vídeo no fim da playlist. */
+export async function adicionarNaPlaylist(acesso: string, playlistId: string, videoId: string) {
+  const r = await fetch(`${API}/playlistItems?part=snippet`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${acesso}`, "content-type": "application/json" },
+    body: JSON.stringify({ snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } } }),
+  });
+  if (!r.ok) throw new Error(await erroDaApi(r, "O YouTube recusou adicionar o vídeo à playlist"));
 }

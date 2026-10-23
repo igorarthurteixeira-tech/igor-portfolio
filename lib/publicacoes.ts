@@ -58,6 +58,8 @@ export type Detalhe = {
   iniciado_em?: string;
   /** Observação não fatal (ex.: o YouTube deixou o vídeo privado). */
   aviso?: string;
+  /** YouTube: o vídeo já foi colocado na playlist da série. */
+  na_playlist?: boolean;
 };
 
 export type Publicacao = {
