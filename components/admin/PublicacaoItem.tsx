@@ -136,7 +136,8 @@ export default function PublicacaoItem({
 
   return (
     <li
-      className={`card overflow-hidden p-0 ${atencao ? "border-amber-300 ring-1 ring-amber-200" : ""} ${
+      id={`pub-${p.id}`}
+      className={`card scroll-mt-36 overflow-hidden p-0 ${atencao ? "border-amber-300 ring-1 ring-amber-200" : ""} ${
         concluida(p) ? "opacity-75" : ""
       } ${pendente ? "opacity-60" : ""}`}
     >

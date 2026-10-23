@@ -7,6 +7,7 @@ import { idEpisodio, series } from "@/lib/series";
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
 import ConexoesRedes from "@/components/admin/ConexoesRedes";
+import IndicePublicacoes, { type GrupoIndice } from "@/components/admin/IndicePublicacoes";
 
 export const dynamic = "force-dynamic";
 // "Publicar agora" espera o Instagram processar o vídeo (até cerca de 50 s)
@@ -98,33 +99,52 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
     { id: "concluidas", rotulo: "Concluídas", n: concluidas.length },
   ];
 
+  const rotuloItem = (p: Publicacao) => {
+    const [slug, n] = (p.episodio ?? "").split(":");
+    const ep = series.find((s) => s.slug === slug)?.episodios.find((e) => String(e.numero) === n);
+    return ep ? `Ep. ${ep.numero} · ${ep.titulo}` : p.titulo;
+  };
+
   const lista = (itens: Publicacao[], vazio: string) => {
     if (itens.length === 0) return <div className="card p-8 text-center text-slate-500">{vazio}</div>;
-    return agruparPorSerie(itens).map((g) => (
-      <section key={g.chave} className="mb-8">
-        <h2 className="mb-3 flex items-baseline gap-3 text-lg font-bold text-fg">
-          {g.titulo}
-          <span className="text-sm font-normal text-slate-500">
-            {g.itens.length} {g.itens.length === 1 ? "item" : "itens"}
-          </span>
-        </h2>
-        <ul className="space-y-4">
-          {g.itens.map((p) => (
-            <PublicacaoItem
-              key={p.id}
-              p={p}
-              conectadas={conectadas}
-              miniatura={p.capa_path ? miniaturas[p.capa_path] : undefined}
-            />
+    const grupos = agruparPorSerie(itens);
+    const indice: GrupoIndice[] = grupos.map((g) => ({
+      chave: g.chave,
+      titulo: g.titulo,
+      itens: g.itens.map((p) => ({ id: p.id, rotulo: rotuloItem(p), estado: situacao(p) })),
+    }));
+    return (
+      <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
+        <IndicePublicacoes grupos={indice} />
+        <div className="min-w-0">
+          {grupos.map((g) => (
+            <section key={g.chave} id={`serie-${g.chave}`} className="mb-8 scroll-mt-36">
+              <h2 className="mb-3 flex items-baseline gap-3 text-lg font-bold text-fg">
+                {g.titulo}
+                <span className="text-sm font-normal text-slate-500">
+                  {g.itens.length} {g.itens.length === 1 ? "item" : "itens"}
+                </span>
+              </h2>
+              <ul className="space-y-4">
+                {g.itens.map((p) => (
+                  <PublicacaoItem
+                    key={p.id}
+                    p={p}
+                    conectadas={conectadas}
+                    miniatura={p.capa_path ? miniaturas[p.capa_path] : undefined}
+                  />
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
-      </section>
-    ));
+        </div>
+      </div>
+    );
   };
 
   return (
     <section className="bg-page-2 px-4 pb-24 pt-8 sm:px-6 sm:pt-10">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-6xl">
         <div className="mb-6">
           <p className="eyebrow">Painel</p>
           <h1 className="text-3xl font-bold tracking-tight text-fg">Publicações</h1>
@@ -182,7 +202,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
             </nav>
 
             {aba === "nova" && (
-              <div className="card">
+              <div className="card mx-auto max-w-3xl">
                 <FormPublicacao episodios={episodios} />
               </div>
             )}
