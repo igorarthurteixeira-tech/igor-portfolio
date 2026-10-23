@@ -5,7 +5,7 @@ export type RedeId = "instagram" | "youtube" | "linkedin" | "tiktok";
 
 export const REDES: { id: RedeId; nome: string; titulo: boolean; automatica: boolean }[] = [
   { id: "instagram", nome: "Instagram", titulo: false, automatica: true },
-  { id: "youtube", nome: "YouTube", titulo: true, automatica: false },
+  { id: "youtube", nome: "YouTube", titulo: true, automatica: true },
   { id: "linkedin", nome: "LinkedIn", titulo: false, automatica: false },
   { id: "tiktok", nome: "TikTok", titulo: false, automatica: false },
 ];
@@ -20,6 +20,10 @@ export type Detalhe = {
   permalink?: string | null;
   erro?: string;
   publicado_em?: string;
+  /** Momento em que um envio sem volta (YouTube) começou; evita enviar duas vezes. */
+  iniciado_em?: string;
+  /** Observação não fatal (ex.: o YouTube deixou o vídeo privado). */
+  aviso?: string;
 };
 
 export type Publicacao = {

@@ -7,10 +7,11 @@ import {
   type StatusRede,
 } from "@/lib/publicacoes";
 import * as ig from "./instagram";
+import * as yt from "./youtube";
 
 type Db = NonNullable<ReturnType<typeof supabaseAdmin>>;
 
-export const REDES_AUTOMATICAS: RedeId[] = ["instagram"];
+export const REDES_AUTOMATICAS: RedeId[] = ["instagram", "youtube"];
 export type Resultado = { estado: StatusRede; mensagem: string };
 
 const DIA = 86400000;
@@ -117,7 +118,81 @@ export async function executarInstagram(id: string, esperaMs: number): Promise<R
   }
 }
 
+async function baixar(db: Db, path: string) {
+  const r = await fetch(await urlAssinada(db, path));
+  if (!r.ok) throw new Error("Não foi possível ler o arquivo no Storage.");
+  return { dados: await r.arrayBuffer(), tipo: r.headers.get("content-type") ?? "application/octet-stream" };
+}
+
+/**
+ * Envia o vídeo ao YouTube. Um envio não pode ser repetido sem criar um vídeo duplicado,
+ * então o início é registrado antes: se a função for interrompida no meio, a publicação
+ * vira "erro" (sem tentar de novo sozinha) e você confere no YouTube antes de reenviar.
+ */
+export async function executarYoutube(id: string): Promise<Resultado> {
+  const db = supabaseAdmin();
+  if (!db) return { estado: "erro", mensagem: "Supabase não configurado." };
+
+  const { data } = await db.from("publicacoes").select("*").eq("id", id).single();
+  const pub = data as Publicacao | null;
+  if (!pub) return { estado: "erro", mensagem: "Publicação não encontrada." };
+  if (pub.status_redes.youtube === "publicado") return { estado: "publicado", mensagem: "Já publicada no YouTube." };
+
+  if (pub.status_redes.youtube === "processando") {
+    const inicio = Date.parse(pub.detalhes_redes.youtube?.iniciado_em ?? "");
+    if (Number.isFinite(inicio) && Date.now() - inicio < 15 * 60000) {
+      return { estado: "processando", mensagem: "O envio ao YouTube está em andamento." };
+    }
+    const erro = "O envio ao YouTube foi interrompido. Confira no YouTube Studio se o vídeo subiu antes de tentar de novo.";
+    await salvar(db, id, "youtube", "erro", { erro });
+    return { estado: "erro", mensagem: erro };
+  }
+
+  try {
+    if (!pub.video_path) throw new Error("Esta publicação não tem vídeo.");
+    const titulo = pub.textos.youtube?.titulo?.trim();
+    if (!titulo) throw new Error("Falta o título do YouTube.");
+    const { data: con } = await db.from("redes_conexoes").select("token").eq("rede", "youtube").maybeSingle();
+    if (!con) throw new Error("O YouTube ainda não está conectado. Conecte no topo da página.");
+
+    const acesso = await yt.tokenDeAcesso(con.token as string);
+    const video = await baixar(db, pub.video_path);
+    await salvar(db, id, "youtube", "processando", { iniciado_em: new Date().toISOString() });
+
+    const envio = await yt.enviarVideo(acesso, video.dados, {
+      titulo,
+      descricao: pub.textos.youtube?.legenda ?? "",
+      publico: true,
+    });
+
+    let aviso: string | undefined;
+    if (envio.privacidade !== "public") {
+      aviso = "O YouTube deixou o vídeo privado (projeto ainda sem auditoria). Mude a visibilidade no YouTube Studio.";
+    }
+    if (pub.capa_path) {
+      try {
+        const capa = await baixar(db, pub.capa_path);
+        await yt.definirCapa(acesso, envio.id, capa.dados, capa.tipo);
+      } catch (e) {
+        aviso = `${aviso ? `${aviso} ` : ""}${e instanceof Error ? e.message : "Capa não aplicada."}`;
+      }
+    }
+    await salvar(db, id, "youtube", "publicado", {
+      media_id: envio.id,
+      permalink: `https://youtu.be/${envio.id}`,
+      publicado_em: new Date().toISOString(),
+      aviso,
+    });
+    return { estado: "publicado", mensagem: aviso ?? "Publicado no YouTube." };
+  } catch (e) {
+    const erro = e instanceof Error ? e.message : "Erro desconhecido.";
+    await salvar(db, id, "youtube", "erro", { erro });
+    return { estado: "erro", mensagem: erro };
+  }
+}
+
 export async function executarRede(id: string, rede: RedeId, esperaMs: number): Promise<Resultado> {
   if (rede === "instagram") return executarInstagram(id, esperaMs);
+  if (rede === "youtube") return executarYoutube(id);
   return { estado: "erro", mensagem: "Esta rede ainda não tem publicação automática." };
 }

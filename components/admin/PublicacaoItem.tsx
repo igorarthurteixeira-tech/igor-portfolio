@@ -125,6 +125,9 @@ export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conec
               {status === "erro" && det?.erro && (
                 <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{det.erro}</p>
               )}
+              {det?.aviso && (
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{det.aviso}</p>
+              )}
               {status === "publicado" && det?.permalink && (
                 <a
                   href={det.permalink}

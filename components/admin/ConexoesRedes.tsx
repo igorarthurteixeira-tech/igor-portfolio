@@ -1,13 +1,29 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { diasRestantes, type Conexao } from "@/lib/publicacoes";
 import { conectarInstagram, desconectarRede } from "@/app/(site)/admin/publicacoes/actions";
 
 export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
   const router = useRouter();
   const insta = conexoes.find((c) => c.rede === "instagram");
+  const yt = conexoes.find((c) => c.rede === "youtube");
+  const params = useSearchParams();
+  const retorno = params.get("youtube");
+  const aviso = retorno
+    ? {
+        ok: retorno === "ok",
+        texto:
+          {
+            ok: "YouTube conectado.",
+            negado: "Você não autorizou o acesso no Google.",
+            invalido: "A autorização não pôde ser confirmada. Tente de novo.",
+            "sem-configuracao": "As chaves do Google ainda não estão configuradas no servidor.",
+            erro: "Não foi possível concluir a conexão com o YouTube.",
+          }[retorno] ?? "Não foi possível concluir a conexão com o YouTube.",
+      }
+    : null;
   const [token, setToken] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = useTransition();
@@ -87,6 +103,54 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
             {msg.texto}
           </p>
         )}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-line p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-semibold text-fg">YouTube</span>
+          {yt ? (
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+              Conectado{yt.conta_nome ? ` · ${yt.conta_nome}` : ""}
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+              Não conectado
+            </span>
+          )}
+          <div className="ml-auto flex gap-2">
+            <a
+              href="/api/redes/youtube/conectar"
+              className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+            >
+              {yt ? "Reconectar com o Google" : "Conectar com o Google"}
+            </a>
+            {yt && (
+              <button
+                className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                disabled={pendente}
+                onClick={() => {
+                  if (confirm("Desconectar o YouTube? O acesso guardado será apagado.")) {
+                    iniciar(async () => {
+                      await desconectarRede("youtube");
+                      router.refresh();
+                    });
+                  }
+                }}
+              >
+                Desconectar
+              </button>
+            )}
+          </div>
+        </div>
+        {aviso && (
+          <p className={`mt-2 text-sm ${aviso.ok ? "text-emerald-700" : "text-red-600"}`} role="status">
+            {aviso.texto}
+          </p>
+        )}
+        <p className="mt-2 text-xs text-slate-500">
+          Enquanto o projeto do Google não passar pela auditoria, os vídeos enviados ficam privados e você muda a
+          visibilidade no YouTube Studio.
+        </p>
       </div>
     </div>
   );
