@@ -6,6 +6,7 @@ import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import * as ig from "@/lib/redes/instagram";
 import { executarRede } from "@/lib/redes/executar";
+import { idsValidos } from "@/lib/series";
 import {
   BUCKET,
   LIMITE_ARQUIVO,
@@ -43,6 +44,7 @@ export async function salvarPublicacao(dados: {
   agendadaEm: string | null;
   videoPath: string | null;
   capaPath: string | null;
+  episodio: string | null;
 }): Promise<Resultado> {
   if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
   const titulo = limpar(dados.titulo, 120);
@@ -68,6 +70,7 @@ export async function salvarPublicacao(dados: {
     agendada_em: dados.agendadaEm,
     video_path: dados.videoPath,
     capa_path: dados.capaPath,
+    episodio: dados.episodio && idsValidos().has(dados.episodio) ? dados.episodio : null,
   });
   if (error) return { ok: false, erro: "Não foi possível salvar." };
   revalidatePath("/admin/publicacoes");

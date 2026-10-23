@@ -6,6 +6,7 @@ import { concluida, type Conexao, type Publicacao, type RedeId } from "@/lib/pub
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
 import ConexoesRedes from "@/components/admin/ConexoesRedes";
+import { idEpisodio, series } from "@/lib/series";
 
 export const dynamic = "force-dynamic";
 // "Publicar agora" espera o Instagram processar o vídeo (até cerca de 50 s)
@@ -29,6 +30,13 @@ export default async function PublicacoesPage() {
     : { data: null };
   const conexoes = (con ?? []) as Conexao[];
   const conectadas = conexoes.map((c) => c.rede as RedeId);
+
+  const episodios = series.flatMap((s) =>
+    s.episodios.map((e) => ({
+      id: idEpisodio(s.slug, e.numero),
+      rotulo: `${s.titulo}, Ep. ${e.numero}: ${e.titulo}`,
+    })),
+  );
 
   const todas = (data ?? []) as Publicacao[];
   const abertas = todas.filter((p) => !concluida(p));
@@ -60,7 +68,7 @@ export default async function PublicacoesPage() {
         ) : (
           <>
             <ConexoesRedes conexoes={conexoes} />
-            <FormPublicacao />
+            <FormPublicacao episodios={episodios} />
           </>
         )}
 

@@ -44,12 +44,13 @@ async function enviar(
   return pre.path;
 }
 
-export default function FormPublicacao() {
+export default function FormPublicacao({ episodios }: { episodios: { id: string; rotulo: string }[] }) {
   const router = useRouter();
   const [titulo, setTitulo] = useState("");
   const [redes, setRedes] = useState<RedeId[]>(["instagram", "youtube"]);
   const [textos, setTextos] = useState<Textos>({});
   const [quando, setQuando] = useState("");
+  const [episodio, setEpisodio] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = useTransition();
   const [progresso, setProgresso] = useState<Progresso | null>(null);
@@ -81,11 +82,13 @@ export default function FormPublicacao() {
           agendadaEm: localParaIso(quando),
           videoPath,
           capaPath,
+          episodio: episodio || null,
         });
         if (!r.ok) throw new Error(r.erro);
         setTitulo("");
         setTextos({});
         setQuando("");
+        setEpisodio("");
         if (video.current) video.current.value = "";
         if (capa.current) capa.current.value = "";
         setMsg({ ok: true, texto: "Publicação salva na fila." });
@@ -119,6 +122,21 @@ export default function FormPublicacao() {
           aria-label="Data e hora (horário de Brasília)"
         />
       </div>
+
+      <label className="block text-sm text-muted">
+        Episódio da série (opcional)
+        <select value={episodio} onChange={(e) => setEpisodio(e.target.value)} className="field mt-1">
+          <option value="">Nenhum</option>
+          {episodios.map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.rotulo}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-slate-500">
+          Com o YouTube marcado, o site passa a exibir este vídeo no episódio sozinho, assim que ele estiver público.
+        </span>
+      </label>
 
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Redes</p>

@@ -54,6 +54,8 @@ export type Publicacao = {
   agendada_em: string | null;
   video_path: string | null;
   capa_path: string | null;
+  /** Episódio da série que este vídeo representa (ex.: "expediente:1"). */
+  episodio: string | null;
   status_redes: Partial<Record<RedeId, StatusRede>>;
   detalhes_redes: Partial<Record<RedeId, Detalhe>>;
   criado_em: string;

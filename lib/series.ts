@@ -1,7 +1,7 @@
 /**
  * Séries de ficção do portfólio ("Vida de Dono").
  * Para adicionar um episódio: inclua um item em `episodios` e, quando o vídeo
- * estiver no YouTube, preencha `youtubeId` (a parte depois de `v=` ou de `/shorts/`).
+ * estiver no YouTube, o painel de Publicações liga o vídeo ao episódio (campo "Episódio da série").
  */
 
 /** Curtidas e comentários só aparecem em números a partir destes valores. */
@@ -54,7 +54,6 @@ export const series: Serie[] = [
           "A planilha trava, o Seu Sérgio jura que funciona e a gerente ameaça o emprego da Camila.",
         duracao: "1:27",
         poster: "/series/expediente-ep1.jpg",
-        youtubeId: "PXUjhoaBLAc",
         estreia: "2026-10-26T12:00:00-03:00",
       },
       {
@@ -64,7 +63,6 @@ export const series: Serie[] = [
           "Trezentas e oitenta linhas copiadas à mão, três versões do mesmo arquivo e uma mensagem enviada ao grupo errado.",
         duracao: "1:34",
         poster: "/series/expediente-ep2.jpg",
-        youtubeId: "6j9W1KLeRVg",
         estreia: "2026-10-27T12:00:00-03:00",
       },
       {
@@ -74,7 +72,6 @@ export const series: Serie[] = [
           "Faltam dois minutos para o prazo e o Kevin apaga o arquivo. O dono demite o estagiário, que nem registro tem.",
         duracao: "1:20",
         poster: "/series/expediente-ep3.jpg",
-        youtubeId: "WhVoCdjMuxI",
         estreia: "2026-10-28T12:00:00-03:00",
       },
       {
@@ -84,7 +81,6 @@ export const series: Serie[] = [
           "O backup é de março, o cliente cancela e o dono demite todo mundo. Menos o Tadeu, calmo demais.",
         duracao: "1:26",
         poster: "/series/expediente-ep4.jpg",
-        youtubeId: "mEFsOHM3HrA",
         estreia: "2026-10-29T12:00:00-03:00",
       },
       {
@@ -94,7 +90,6 @@ export const series: Serie[] = [
           "O Tadeu mostra o chamado que o dono arquivou em março e o sistema que guardou tudo até 17h57.",
         duracao: "1:38",
         poster: "/series/expediente-ep5.jpg",
-        youtubeId: "XpmIJAQkfaY",
         estreia: "2026-10-30T12:00:00-03:00",
       },
     ],
@@ -114,7 +109,6 @@ export const series: Serie[] = [
           "O Marcelo está de férias, a senha é “a mesma de sempre” e o Beto, o primo da informática, resolve ajudar.",
         duracao: "1:21",
         poster: "/series/padaria-da-rosa-ep1.jpg",
-        youtubeId: "mGCOHBN4x1o",
         estreia: "2026-10-23T12:00:00-03:00",
         arquivoLocal: "/series/padaria-da-rosa-ep1.mp4",
       },
@@ -125,7 +119,6 @@ export const series: Serie[] = [
           "A Rosa desabafa com uma amiga, descobre que dá para testar um sistema antes de pagar e a equipe reage.",
         duracao: "1:22",
         poster: "/series/padaria-da-rosa-ep2.jpg",
-        youtubeId: "8R_jQ2GmJpA",
         estreia: "2026-10-24T12:00:00-03:00",
         arquivoLocal: "/series/padaria-da-rosa-ep2.mp4",
       },
@@ -136,7 +129,6 @@ export const series: Serie[] = [
           "O Seu Zé jura que pagou, o caderninho do fiado está encharcado de café e o Beto, claro, tenta ajudar.",
         duracao: "0:48",
         poster: "/series/padaria-da-rosa-ep3.jpg",
-        youtubeId: "jr08LS6VxAE",
         estreia: "2026-10-25T12:00:00-03:00",
         arquivoLocal: "/series/padaria-da-rosa-ep3.mp4",
       },
