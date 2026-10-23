@@ -10,6 +10,26 @@ export const REDES: { id: RedeId; nome: string; titulo: boolean; automatica: boo
   { id: "tiktok", nome: "TikTok", titulo: false, automatica: false },
 ];
 
+/** Formatos recomendados (orientação para quem prepara o arquivo; o painel não converte nada). */
+export const FORMATOS: Record<RedeId, { video: string; capa: string }> = {
+  instagram: {
+    video: "Vertical 9:16, 1080×1920, MP4 (H.264), até 90 s",
+    capa: "Vertical 9:16, 1080×1920. No perfil ela aparece cortada em 4:5, então mantenha o essencial no centro",
+  },
+  youtube: {
+    video: "Vertical 9:16, 1080×1920, MP4, até 3 min (vira Short). Horizontal 16:9 vira vídeo comum",
+    capa: "Horizontal 16:9, 1280×720, JPG ou PNG, até 2 MB. Em Shorts ela só vale no perfil e na busca",
+  },
+  linkedin: {
+    video: "Vertical 4:5, 1080×1350, MP4. Ocupa mais espaço no feed que o 9:16",
+    capa: "4:5, 1080×1350",
+  },
+  tiktok: {
+    video: "Vertical 9:16, 1080×1920, MP4, até 60 s",
+    capa: "Vertical 9:16, 1080×1920",
+  },
+};
+
 export type StatusRede = "pendente" | "processando" | "publicado" | "erro";
 
 export type Textos = Partial<Record<RedeId, { titulo?: string; legenda?: string }>>;

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BUCKET, LIMITE_ARQUIVO, REDES, localParaIso, type RedeId, type Textos } from "@/lib/publicacoes";
+import { BUCKET, FORMATOS, LIMITE_ARQUIVO, REDES, localParaIso, type RedeId, type Textos } from "@/lib/publicacoes";
 import { criarUploadUrl, salvarPublicacao } from "@/app/(site)/admin/publicacoes/actions";
 
 type Progresso = { rotulo: string; feito: number; total: number };
@@ -173,6 +173,27 @@ export default function FormPublicacao() {
           <input ref={capa} type="file" accept="image/jpeg,image/png" className="field mt-1" />
         </label>
       </div>
+
+      {redes.length > 0 && (
+        <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+          <p className="mb-2 font-semibold text-fg">Formato ideal por rede</p>
+          <ul className="space-y-2">
+            {REDES.filter((r) => redes.includes(r.id)).map((r) => (
+              <li key={r.id}>
+                <span className="font-medium text-fg">{r.nome}</span>
+                <br />
+                <span className="text-slate-500">Vídeo:</span> {FORMATOS[r.id].video}
+                <br />
+                <span className="text-slate-500">Capa:</span> {FORMATOS[r.id].capa}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-slate-500">
+            O arquivo enviado é usado como está, para todas as redes marcadas. Para redes com formato
+            diferente, crie uma publicação separada com o vídeo na proporção certa.
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <button disabled={pendente} className="btn-dark px-6! py-2.5!">
