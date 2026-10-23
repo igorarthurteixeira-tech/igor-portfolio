@@ -13,6 +13,7 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
   const li = conexoes.find((c) => c.rede === "linkedin");
   const diasLi = diasRestantes(li?.expira_em ?? null);
   const retornoLi = params.get("linkedin");
+  const motivoLi = params.get("motivo");
   const avisoLi = retornoLi
     ? {
         ok: retornoLi === "ok",
@@ -213,6 +214,11 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
         {avisoLi && (
           <p className={`mt-2 text-sm ${avisoLi.ok ? "text-emerald-700" : "text-red-600"}`} role="status">
             {avisoLi.texto}
+          </p>
+        )}
+        {avisoLi && !avisoLi.ok && motivoLi && (
+          <p className="mt-1 break-words rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            Resposta do LinkedIn: {motivoLi}
           </p>
         )}
         <p className="mt-2 text-xs text-slate-500">
