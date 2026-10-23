@@ -54,6 +54,7 @@ export const series: Serie[] = [
           "A planilha trava, o Seu Sérgio jura que funciona e a gerente ameaça o emprego da Camila.",
         duracao: "1:27",
         poster: "/series/expediente-ep1.jpg",
+        youtubeId: "PXUjhoaBLAc",
         estreia: "2026-10-26T12:00:00-03:00",
       },
       {
@@ -63,6 +64,7 @@ export const series: Serie[] = [
           "Trezentas e oitenta linhas copiadas à mão, três versões do mesmo arquivo e uma mensagem enviada ao grupo errado.",
         duracao: "1:34",
         poster: "/series/expediente-ep2.jpg",
+        youtubeId: "6j9W1KLeRVg",
         estreia: "2026-10-27T12:00:00-03:00",
       },
       {
@@ -72,6 +74,7 @@ export const series: Serie[] = [
           "Faltam dois minutos para o prazo e o Kevin apaga o arquivo. O dono demite o estagiário, que nem registro tem.",
         duracao: "1:20",
         poster: "/series/expediente-ep3.jpg",
+        youtubeId: "WhVoCdjMuxI",
         estreia: "2026-10-28T12:00:00-03:00",
       },
       {
@@ -81,6 +84,7 @@ export const series: Serie[] = [
           "O backup é de março, o cliente cancela e o dono demite todo mundo. Menos o Tadeu, calmo demais.",
         duracao: "1:26",
         poster: "/series/expediente-ep4.jpg",
+        youtubeId: "mEFsOHM3HrA",
         estreia: "2026-10-29T12:00:00-03:00",
       },
       {
@@ -90,6 +94,7 @@ export const series: Serie[] = [
           "O Tadeu mostra o chamado que o dono arquivou em março e o sistema que guardou tudo até 17h57.",
         duracao: "1:38",
         poster: "/series/expediente-ep5.jpg",
+        youtubeId: "XpmIJAQkfaY",
         estreia: "2026-10-30T12:00:00-03:00",
       },
     ],

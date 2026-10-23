@@ -149,7 +149,7 @@ export default function PlayerEpisodio({
       aria-label={`Episódio ${episodio.numero}: ${episodio.titulo}`}
       onMouseDown={(e) => e.target === e.currentTarget && onFechar()}
     >
-      <div className="relative flex max-h-full w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl md:flex-row">
+      <div className="relative flex max-h-full w-full max-w-4xl flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl md:flex-row md:overflow-hidden">
         <button
           onClick={onFechar}
           aria-label="Fechar"
@@ -159,7 +159,7 @@ export default function PlayerEpisodio({
         </button>
 
         {/* vídeo (vertical) */}
-        <div className="relative mx-auto aspect-[9/16] w-full max-w-[300px] shrink-0 self-center bg-black max-md:max-h-[52vh] max-md:w-auto md:max-w-[340px]">
+        <div className="relative mx-auto aspect-[9/16] w-[min(50vw,240px)] shrink-0 self-center bg-black md:w-[340px]">
           {tocando && episodio.youtubeId ? (
             <iframe
               className="absolute inset-0 h-full w-full"
@@ -195,7 +195,7 @@ export default function PlayerEpisodio({
         </div>
 
         {/* informações, curtir e comentar */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-5 sm:p-7">
+        <div className="flex flex-1 flex-col p-5 sm:p-7 md:min-h-0 md:overflow-y-auto">
           <p className="eyebrow mb-1">
             {serie.titulo} · Episódio {episodio.numero}
           </p>
