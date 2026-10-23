@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { diaDaEstreia, estaDisponivel, type Serie } from "@/lib/series";
 import { useAgora } from "./useAgora";
 import PlayerEpisodio from "./PlayerEpisodio";
@@ -81,7 +82,8 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
           })}
       </ul>
 
-      {episodio && (
+      {episodio &&
+        createPortal(
         <PlayerEpisodio
           key={episodio.numero}
           serie={serie}
@@ -90,8 +92,9 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
           comecarTocando={seguirTocando}
           onAnterior={posicao > 0 ? (t) => ir(posicao - 1, t) : undefined}
           onProximo={posicao < ordem.length - 1 ? (t) => ir(posicao + 1, t) : undefined}
-        />
-      )}
+        />,
+          document.body,
+        )}
     </>
   );
 }
