@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { acharSerie, series } from "@/lib/series";
-import { serieComVideos } from "@/lib/series-videos";
+import { serieDoPainel } from "@/lib/series-videos";
 import ListaEpisodios from "@/components/series/ListaEpisodios";
 
 // Os vídeos vêm do painel de Publicações: a página se atualiza sozinha a cada 5 minutos.
@@ -33,9 +33,8 @@ export default async function SeriePage({
   params: Promise<{ serie: string }>;
 }) {
   const { serie: slug } = await params;
-  const base = acharSerie(slug);
-  if (!base) notFound();
-  const serie = await serieComVideos(base);
+  const serie = await serieDoPainel(slug);
+  if (!serie) notFound();
 
   return (
     <>

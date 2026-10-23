@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { diaDaEstreia, series, type Serie } from "@/lib/series";
+import { seriesDoPainel } from "@/lib/series-videos";
+import type { Serie } from "@/lib/series";
 import AnimatedCard from "@/components/AnimatedCard";
 
 function Selo({ n }: { n: number }) {
@@ -17,8 +18,11 @@ function Selo({ n }: { n: number }) {
 /** Série em destaque: ocupa duas colunas, com selo "Nova série" e as datas de estreia. */
 function CartaoDestaque({ s }: { s: Serie }) {
   const eps = s.episodios;
-  const ini = diaDaEstreia(eps[0]);
-  const fim = diaDaEstreia(eps[eps.length - 1]);
+  const dia = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }) : null;
+  const datas = eps.map((e) => e.quando).filter((q): q is string => !!q).sort();
+  const ini = dia(datas[0]);
+  const fim = dia(datas[datas.length - 1]);
   return (
     <Link
       href={`/vida-de-dono/${s.slug}`}
@@ -45,7 +49,7 @@ function CartaoDestaque({ s }: { s: Serie }) {
       <div className="flex flex-col justify-center p-7 md:p-8">
         {ini && fim && (
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-accent-strong">
-            Estreia {ini} · um episódio por dia até {fim}
+            {ini === fim ? `Estreia ${ini}` : `Estreia ${ini} · último episódio em ${fim}`}
           </p>
         )}
         <h3 className="mb-3 text-3xl font-bold tracking-tight text-fg">{s.titulo}</h3>
@@ -92,8 +96,10 @@ function CartaoSerie({ s }: { s: Serie }) {
 }
 
 /** Seção da home com um cartão por série (a série em destaque vem primeiro). */
-export default function SecaoSeries() {
-  const ordenadas = [...series].sort((a, b) => Number(!!b.destaque) - Number(!!a.destaque));
+export default async function SecaoSeries() {
+  const todas = await seriesDoPainel();
+  if (todas.length === 0) return null;
+  const ordenadas = [...todas].sort((a, b) => Number(!!b.destaque) - Number(!!a.destaque));
   return (
     <section
       id="vida-de-dono"

@@ -2,10 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import MensagemItem, { type Mensagem } from "@/components/admin/MensagemItem";
-import ComentarioItem, { type ComentarioSerie } from "@/components/admin/ComentarioItem";
-import { idEpisodio, series } from "@/lib/series";
-import { sair } from "./actions";
+import { quando, type Publicacao } from "@/lib/publicacoes";
 
 export const dynamic = "force-dynamic";
 
@@ -70,14 +67,13 @@ function Icone({ nome }: { nome: keyof typeof icones }) {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ d?: string; f?: string }>;
+  searchParams: Promise<{ d?: string }>;
 }) {
   const user = await getAdminUser();
   if (!user) redirect("/admin/login");
 
   const sp = await searchParams;
   const dias = PERIODOS.find((p) => String(p) === sp.d) ?? 30;
-  const soNaoLidas = sp.f === "nao-lidas";
 
   const db = supabaseAdmin();
   if (!db) {
@@ -88,30 +84,27 @@ export default async function AdminPage({
     );
   }
 
-  const [{ data: ev }, { data: msgs }, curtidasSerie, comentariosSerie] = await Promise.all([
+  const [{ data: ev }, naoLidasRes, { data: pubs }] = await Promise.all([
     db
       .from("eventos")
       .select("tipo,caminho,alvo,sessao,referrer,created_at")
       .gte("created_at", diasAtras(dias).toISOString())
       .order("created_at", { ascending: false })
       .limit(LIMITE_EVENTOS),
+    db.from("mensagens").select("*", { count: "exact", head: true }).eq("lida", false),
     db
-      .from("mensagens")
+      .from("publicacoes")
       .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200),
-    db.from("serie_curtidas").select("episodio").limit(50000),
-    db
-      .from("serie_comentarios")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(300),
+      .not("agendada_em", "is", null)
+      .order("agendada_em", { ascending: true })
+      .limit(100),
   ]);
 
   const eventos = (ev ?? []) as Evento[];
-  const todas = (msgs ?? []) as Mensagem[];
-  const naoLidas = todas.filter((m) => !m.lida).length;
-  const mensagens = soNaoLidas ? todas.filter((m) => !m.lida) : todas;
+  const naoLidas = naoLidasRes.count ?? 0;
+  const proximas = ((pubs ?? []) as Publicacao[])
+    .filter((p) => p.redes.some((r) => p.status_redes[r] !== "publicado"))
+    .slice(0, 4);
   const truncado = eventos.length >= LIMITE_EVENTOS;
   const views = eventos.filter((e) => e.tipo === "view");
   const cliques = eventos.filter((e) => e.tipo === "click");
@@ -159,40 +152,6 @@ export default async function AdminPage({
     ["Origem do tráfego", top(views.map((v) => host(v.referrer)))],
   ] as const;
 
-  // ---- Vida de Dono: aberturas, plays, curtidas e comentários por episódio
-  const serieIndisponivel = !!curtidasSerie.error || !!comentariosSerie.error;
-  const curtidasPorEp = new Map<string, number>();
-  for (const l of (curtidasSerie.data ?? []) as { episodio: string }[]) {
-    curtidasPorEp.set(l.episodio, (curtidasPorEp.get(l.episodio) ?? 0) + 1);
-  }
-  const comentariosSerieLista = (comentariosSerie.data ?? []) as ComentarioSerie[];
-  const linhasSerie = series.flatMap((s) =>
-    s.episodios.map((e) => {
-      const id = idEpisodio(s.slug, e.numero);
-      const dosEp = comentariosSerieLista.filter((c) => c.episodio === id);
-      return {
-        id,
-        rotulo: `${s.titulo} · Ep. ${e.numero}`,
-        titulo: e.titulo,
-        aberturas: cliques.filter((c) => c.alvo === `serie:${s.slug}:${e.numero}:abrir`).length,
-        plays: cliques.filter((c) => c.alvo === `serie:${s.slug}:${e.numero}:play`).length,
-        curtidas: curtidasPorEp.get(id) ?? 0,
-        aprovados: dosEp.filter((c) => c.aprovado).length,
-        pendentes: dosEp.filter((c) => !c.aprovado).length,
-      };
-    }),
-  );
-  const totSerie = {
-    plays: linhasSerie.reduce((a, l) => a + l.plays, 0),
-    curtidas: linhasSerie.reduce((a, l) => a + l.curtidas, 0),
-    comentarios: linhasSerie.reduce((a, l) => a + l.aprovados, 0),
-    pendentes: linhasSerie.reduce((a, l) => a + l.pendentes, 0),
-  };
-  const rotuloEp = new Map(linhasSerie.map((l) => [l.id, l.rotulo]));
-  const comentariosOrdenados = [...comentariosSerieLista].sort(
-    (a, b) => Number(a.aprovado) - Number(b.aprovado),
-  );
-
   const chip = (ativo: boolean) =>
     `rounded-lg px-3 py-1.5 text-xs font-medium transition ${
       ativo
@@ -202,32 +161,16 @@ export default async function AdminPage({
 
   return (
     <section className="bg-page-2 px-6 pb-24 pt-10"><div className="mx-auto max-w-6xl">
-      <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Painel</p>
-          <h1 className="text-3xl font-bold tracking-tight text-fg">
-            Visão geral
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">{user.email}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/admin/publicacoes" className="btn-outline px-4! py-2!">
-            Publicações
-          </Link>
-          <Link href="/" className="btn-outline px-4! py-2!">
-            Ver site
-          </Link>
-          <form action={sair}>
-            <button className="btn-outline px-4! py-2!">Sair</button>
-          </form>
-        </div>
+      <div className="mb-8">
+        <p className="eyebrow">Painel</p>
+        <h1 className="text-3xl font-bold tracking-tight text-fg">Visão geral</h1>
       </div>
 
       <div className="mb-4 flex items-center gap-1">
         {PERIODOS.map((p) => (
           <Link
             key={p}
-            href={`/admin?d=${p}${soNaoLidas ? "&f=nao-lidas" : ""}`}
+            href={`/admin?d=${p}`}
             className={chip(p === dias)}
           >
             {p} dias
@@ -365,113 +308,26 @@ export default async function AdminPage({
         })}
       </div>
 
-      <div className="mb-5">
-        <h2 className="text-2xl font-bold tracking-tight text-fg">Vida de Dono</h2>
-        <p className="mt-1 text-sm text-muted">
-          Cliques nos episódios (no período), curtidas e comentários (total).
-        </p>
-      </div>
-
-      {serieIndisponivel ? (
-        <p className="mb-14 rounded-lg bg-amber-100 px-4 py-3 text-sm text-amber-800">
-          As tabelas de curtidas e comentários ainda não existem no banco. Rode o arquivo{" "}
-          <code>supabase/migrations/20261022000000_serie_vida_de_dono.sql</code> no SQL Editor do
-          Supabase.
-        </p>
-      ) : (
-        <div className="mb-14">
-          <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              ["Plays", totSerie.plays],
-              ["Curtidas", totSerie.curtidas],
-              ["Comentários aprovados", totSerie.comentarios],
-              ["Comentários aguardando", totSerie.pendentes],
-            ].map(([titulo, valor]) => (
-              <div key={String(titulo)} className="card p-5">
-                <p className="text-3xl font-bold tracking-tight text-fg">
-                  {Number(valor).toLocaleString("pt-BR")}
-                </p>
-                <p className="mt-1 text-sm text-muted">{titulo}</p>
-              </div>
+      <div className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight text-fg">Próximas publicações</h2>
+          <Link href="/admin/publicacoes" className="text-sm font-medium text-accent-strong hover:underline">
+            Ver todas →
+          </Link>
+        </div>
+        {proximas.length === 0 ? (
+          <div className="card p-6 text-center text-sm text-slate-500">Nada agendado no momento.</div>
+        ) : (
+          <ul className="card divide-y divide-line">
+            {proximas.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+                <span className="font-medium text-fg">{p.titulo}</span>
+                <span className="text-muted">{quando(p.agendada_em)}</span>
+              </li>
             ))}
-          </div>
-
-          <div className="card mb-4 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-wider text-slate-500">
-                <tr>
-                  <th className="px-5 py-3 font-semibold">Episódio</th>
-                  <th className="px-3 py-3 text-right font-semibold">Aberturas</th>
-                  <th className="px-3 py-3 text-right font-semibold">Plays</th>
-                  <th className="px-3 py-3 text-right font-semibold">Curtidas</th>
-                  <th className="px-5 py-3 text-right font-semibold">Comentários</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhasSerie.map((l) => (
-                  <tr key={l.id} className="border-b border-line last:border-0">
-                    <td className="px-5 py-3">
-                      <span className="font-medium text-fg">{l.titulo}</span>
-                      <span className="block text-xs text-slate-500">{l.rotulo}</span>
-                    </td>
-                    <td className="px-3 py-3 text-right text-muted">{l.aberturas}</td>
-                    <td className="px-3 py-3 text-right text-muted">{l.plays}</td>
-                    <td className="px-3 py-3 text-right text-muted">{l.curtidas}</td>
-                    <td className="px-5 py-3 text-right text-muted">
-                      {l.aprovados}
-                      {l.pendentes > 0 && (
-                        <span className="ml-2 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-                          +{l.pendentes} novo{l.pendentes > 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {comentariosOrdenados.length > 0 && (
-            <>
-              <p className="mb-3 text-sm font-medium text-fg">Comentários</p>
-              <ul className="space-y-3">
-                {comentariosOrdenados.slice(0, 60).map((c) => (
-                  <ComentarioItem key={c.id} c={c} rotulo={rotuloEp.get(c.episodio) ?? c.episodio} />
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold tracking-tight text-fg">
-          Mensagens
-        </h2>
-        <div className="flex items-center gap-1">
-          <Link href={`/admin?d=${dias}`} className={chip(!soNaoLidas)}>
-            Todas ({todas.length})
-          </Link>
-          <Link
-            href={`/admin?d=${dias}&f=nao-lidas`}
-            className={chip(soNaoLidas)}
-          >
-            Não lidas ({naoLidas})
-          </Link>
-        </div>
+          </ul>
+        )}
       </div>
-
-      {mensagens.length === 0 ? (
-        <div className="card p-10 text-center text-slate-500">
-          {soNaoLidas ? "Nenhuma mensagem nova." : "Nenhuma mensagem ainda."}
-        </div>
-      ) : (
-        <ul className="space-y-4">
-          {mensagens.map((m) => (
-            <MensagemItem key={m.id} m={m} />
-          ))}
-        </ul>
-      )}
     </div></section>
   );
 }

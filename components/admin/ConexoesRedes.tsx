@@ -45,8 +45,7 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
   }
 
   return (
-    <div className="card mb-8 p-6">
-      <h2 className="mb-1 text-lg font-semibold text-fg">Conexões</h2>
+    <div className="px-6 pb-6">
       <p className="mb-4 text-sm text-muted">
         O token fica guardado só no servidor e é renovado sozinho antes de vencer.
       </p>

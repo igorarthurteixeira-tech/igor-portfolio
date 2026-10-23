@@ -11,6 +11,7 @@ import {
   BUCKET,
   LIMITE_ARQUIVO,
   idsRedes,
+  localParaIso,
   type RedeId,
   type StatusRede,
   type Textos,
@@ -190,4 +191,40 @@ export async function verificarRede(id: string, rede: string): Promise<Resultado
   const r = await executarRede(id, rede as RedeId, 8_000);
   revalidatePath("/admin/publicacoes");
   return { ok: true, mensagem: r.mensagem, estado: r.estado };
+}
+
+/** Muda (ou remove) a data de agendamento. O site e o agendador passam a usar a nova data. */
+export async function alterarData(
+  id: string,
+  valor: string | null,
+): Promise<Resultado<{ passada: boolean; mensagem: string }>> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  const iso = valor ? localParaIso(valor) : null;
+  if (valor && !iso) return { ok: false, erro: "Data inválida." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+
+  const { data } = await db.from("publicacoes").select("status_redes,episodio").eq("id", id).single();
+  if (!data) return { ok: false, erro: "Publicação não encontrada." };
+  if (Object.values((data.status_redes ?? {}) as Record<string, string>).includes("processando")) {
+    return { ok: false, erro: "Há um envio em andamento. Espere terminar para mudar a data." };
+  }
+
+  const { error } = await db.from("publicacoes").update({ agendada_em: iso }).eq("id", id);
+  if (error) return { ok: false, erro: "Não foi possível salvar a data." };
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/");
+  const slug = (data.episodio as string | null)?.split(":")[0];
+  if (slug) revalidatePath(`/vida-de-dono/${slug}`);
+
+  if (!iso) return { ok: true, passada: false, mensagem: "Data removida. Esta publicação só sai com Publicar agora." };
+  const passada = Date.parse(iso) <= Date.now();
+  return {
+    ok: true,
+    passada,
+    mensagem: passada
+      ? "Data salva. Como já passou, o agendador publica em até 5 minutos."
+      : "Data atualizada.",
+  };
 }

@@ -102,8 +102,7 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
   }
 
   return (
-    <form onSubmit={salvar} className="card mb-10 space-y-5 p-6">
-      <h2 className="text-lg font-semibold text-fg">Nova publicação</h2>
+    <form onSubmit={salvar} className="space-y-5 px-6 pb-6">
 
       <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
         <input

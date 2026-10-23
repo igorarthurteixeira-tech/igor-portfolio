@@ -1,24 +1,30 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { idEpisodio, type Serie } from "@/lib/series";
+import { idEpisodio, series, type Serie } from "@/lib/series";
+
+type Ligacao = { videoId?: string; agendadaEm: string | null; publicadoEm?: string };
 
 /**
- * Vídeos do YouTube enviados pelo painel de Publicações e ligados a um episódio.
- * O ID vem do banco; assim o site passa a mostrar o episódio sem precisar editar o código.
+ * O painel de Publicações é a fonte da verdade da série: cada episódio é ligado a uma
+ * publicação (campo "Episódio da série"). Dela saem o vídeo do YouTube e a data.
  */
-async function videosDoPainel(): Promise<Record<string, string>> {
+async function ligacoesDoPainel(): Promise<Record<string, Ligacao>> {
   const db = supabaseAdmin();
   if (!db) return {};
   const { data } = await db
     .from("publicacoes")
-    .select("episodio,status_redes,detalhes_redes,criado_em")
+    .select("episodio,redes,status_redes,detalhes_redes,agendada_em,criado_em")
     .not("episodio", "is", null)
     .order("criado_em", { ascending: true });
 
-  const mapa: Record<string, string> = {};
+  const mapa: Record<string, Ligacao> = {};
   for (const p of data ?? []) {
-    const id = (p.detalhes_redes as { youtube?: { media_id?: string } } | null)?.youtube?.media_id;
-    const status = (p.status_redes as { youtube?: string } | null)?.youtube;
-    if (p.episodio && id && status === "publicado") mapa[p.episodio as string] = id;
+    const youtube = (p.detalhes_redes as { youtube?: { media_id?: string; publicado_em?: string } } | null)?.youtube;
+    const publicado = (p.status_redes as { youtube?: string } | null)?.youtube === "publicado";
+    mapa[p.episodio as string] = {
+      agendadaEm: (p.agendada_em as string | null) ?? null,
+      videoId: publicado ? youtube?.media_id : undefined,
+      publicadoEm: publicado ? youtube?.publicado_em : undefined,
+    };
   }
   return mapa;
 }
@@ -36,15 +42,32 @@ async function estaPublico(videoId: string) {
   }
 }
 
-/** Devolve a série com o `youtubeId` de cada episódio vindo do painel (quando já está público). */
-export async function serieComVideos(serie: Serie): Promise<Serie> {
-  const mapa = await videosDoPainel();
-  const episodios = await Promise.all(
-    serie.episodios.map(async (ep) => {
-      const doPainel = mapa[idEpisodio(serie.slug, ep.numero)];
-      if (doPainel && (await estaPublico(doPainel))) return { ...ep, youtubeId: doPainel };
-      return ep;
-    }),
-  );
-  return { ...serie, episodios };
+/**
+ * Séries como o site deve mostrar, segundo o painel. Só entram as séries que têm ao menos
+ * um episódio ligado a uma publicação.
+ */
+export async function seriesDoPainel(): Promise<Serie[]> {
+  const mapa = await ligacoesDoPainel();
+  const resultado: Serie[] = [];
+  for (const s of series) {
+    let ligada = false;
+    const episodios = await Promise.all(
+      s.episodios.map(async (ep) => {
+        const base = { ...ep, youtubeId: undefined, estreia: undefined, quando: undefined };
+        const l = mapa[idEpisodio(s.slug, ep.numero)];
+        if (!l) return base;
+        ligada = true;
+        if (l.videoId && (await estaPublico(l.videoId))) {
+          return { ...base, youtubeId: l.videoId, quando: l.publicadoEm ?? l.agendadaEm ?? undefined };
+        }
+        return { ...base, estreia: l.agendadaEm ?? undefined, quando: l.agendadaEm ?? undefined };
+      }),
+    );
+    if (ligada) resultado.push({ ...s, episodios });
+  }
+  return resultado;
+}
+
+export async function serieDoPainel(slug: string) {
+  return (await seriesDoPainel()).find((s) => s.slug === slug);
 }

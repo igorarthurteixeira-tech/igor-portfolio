@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import {
   REDES,
   concluida,
+  isoParaLocal,
   quando,
+  situacao,
   type Publicacao,
   type RedeId,
   type StatusRede,
 } from "@/lib/publicacoes";
+import { idEpisodio, series } from "@/lib/series";
 import {
+  alterarData,
   apagarVideo,
   excluirPublicacao,
   linkDoArquivo,
@@ -32,11 +36,19 @@ const ROTULO: Record<StatusRede, string> = {
   erro: "Erro",
 };
 
+const ROTULOS_EPISODIO = new Map(
+  series.flatMap((s) => s.episodios.map((e) => [idEpisodio(s.slug, e.numero), `${s.titulo} · Ep. ${e.numero}`] as const)),
+);
+
 export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conectadas: RedeId[] }) {
   const [pendente, iniciar] = useTransition();
   const [aviso, setAviso] = useState<string | null>(null);
   const router = useRouter();
   const consultando = useRef(false);
+  const [editando, setEditando] = useState(false);
+  const [novaData, setNovaData] = useState("");
+  const atencao = situacao(p) === "atencao";
+  const podeEditarData = !concluida(p) && !Object.values(p.status_redes).includes("processando");
   const esperaInstagram = p.status_redes.instagram === "processando";
 
   // Enquanto o Instagram processa o vídeo, confere sozinho a cada 15 s e publica quando terminar.
@@ -55,6 +67,21 @@ export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conec
     }, 15000);
     return () => clearInterval(id);
   }, [esperaInstagram, p.id, router]);
+
+  function salvarData(valor: string | null) {
+    if (valor && Date.parse(`${valor}:00-03:00`) <= Date.now()) {
+      if (!confirm("Essa data já passou. O agendador vai publicar em até 5 minutos. Continuar?")) return;
+    }
+    iniciar(async () => {
+      const r = await alterarData(p.id, valor);
+      setAviso(r.ok ? r.mensagem : r.erro);
+      if (r.ok) {
+        setEditando(false);
+        router.refresh();
+      }
+    });
+  }
+
   const botao =
     "rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50";
 
@@ -90,11 +117,61 @@ export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conec
   }
 
   return (
-    <li className={`card p-5 ${concluida(p) ? "opacity-70" : ""} ${pendente ? "opacity-60" : ""}`}>
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4">
-        <p className="font-semibold text-fg">{p.titulo}</p>
-        <span className="text-sm font-medium text-accent-strong">{quando(p.agendada_em)}</span>
+    <li
+      className={`card p-5 ${atencao ? "border-amber-300 ring-1 ring-amber-200" : ""} ${concluida(p) ? "opacity-70" : ""} ${pendente ? "opacity-60" : ""}`}
+    >
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div>
+          <p className="font-semibold text-fg">{p.titulo}</p>
+          {p.episodio && (
+            <span className="mt-1 inline-block rounded-full bg-accent-strong/10 px-2.5 py-0.5 text-xs font-semibold text-accent-strong">
+              Site: {ROTULOS_EPISODIO.get(p.episodio) ?? p.episodio}
+            </span>
+          )}
+        </div>
+        <div className="text-right">
+          <span className="text-sm font-medium text-accent-strong">{quando(p.agendada_em)}</span>
+          {podeEditarData && !editando && (
+            <button
+              className="ml-3 text-xs font-medium text-slate-500 underline-offset-2 hover:text-fg hover:underline"
+              onClick={() => {
+                setNovaData(isoParaLocal(p.agendada_em));
+                setEditando(true);
+              }}
+            >
+              Alterar data
+            </button>
+          )}
+        </div>
       </div>
+
+      {editando && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 p-3">
+          <input
+            type="datetime-local"
+            value={novaData}
+            onChange={(e) => setNovaData(e.target.value)}
+            className="field w-auto"
+            aria-label="Nova data e hora (horário de Brasília)"
+          />
+          <button
+            className="rounded-lg bg-accent-strong px-3 py-2 text-xs font-semibold text-white transition hover:bg-accent disabled:opacity-50"
+            disabled={pendente || !novaData}
+            onClick={() => salvarData(novaData)}
+          >
+            Salvar data
+          </button>
+          {p.agendada_em && (
+            <button className={botao} disabled={pendente} onClick={() => salvarData(null)}>
+              Remover data
+            </button>
+          )}
+          <button className={botao} onClick={() => setEditando(false)}>
+            Cancelar
+          </button>
+          <span className="w-full text-xs text-slate-500">Horário de Brasília. O site também usa esta data.</span>
+        </div>
+      )}
 
       <div className="space-y-3">
         {REDES.filter((r) => p.redes.includes(r.id)).map((r) => {

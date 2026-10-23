@@ -13,6 +13,9 @@ import Contador from "@/components/hero/Contador";
 import TeclasSecoes from "@/components/TeclasSecoes";
 import IconeEtapa from "@/components/IconeEtapa";
 import BotaoChat from "@/components/BotaoChat";
+// A seção Vida de Dono segue o painel de Publicações: atualiza sozinha a cada 5 minutos.
+export const revalidate = 300;
+
 import SecaoSeries from "@/components/series/SecaoSeries";
 
 export default function Home() {

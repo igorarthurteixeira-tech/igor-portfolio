@@ -186,7 +186,10 @@ export async function executarYoutube(id: string): Promise<Resultado> {
     });
     // Se este vídeo é de um episódio da série, atualiza a página do site na hora.
     const slug = pub.episodio?.split(":")[0];
-    if (slug) revalidatePath(`/vida-de-dono/${slug}`);
+    if (slug) {
+      revalidatePath(`/vida-de-dono/${slug}`);
+      revalidatePath("/");
+    }
     return { estado: "publicado", mensagem: aviso ?? "Publicado no YouTube." };
   } catch (e) {
     const erro = e instanceof Error ? e.message : "Erro desconhecido.";

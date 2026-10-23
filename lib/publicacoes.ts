@@ -93,3 +93,30 @@ export function diasRestantes(iso: string | null) {
   if (!iso) return null;
   return Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400000));
 }
+
+/** ISO para o valor de <input type="datetime-local"> no horário de Brasília. */
+export function isoParaLocal(iso: string | null) {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(new Date(iso))
+    .replace(" ", "T");
+}
+
+export type Situacao = "atencao" | "agendada" | "sem-data" | "concluida";
+
+/** Em que grupo a publicação aparece no painel. */
+export function situacao(p: Publicacao): Situacao {
+  if (concluida(p)) return "concluida";
+  const estados = p.redes.map((r) => p.status_redes[r]);
+  const atrasada = !!p.agendada_em && Date.parse(p.agendada_em) < Date.now() && estados.includes("pendente");
+  if (estados.includes("erro") || atrasada) return "atencao";
+  return p.agendada_em ? "agendada" : "sem-data";
+}
