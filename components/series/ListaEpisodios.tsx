@@ -6,12 +6,15 @@ import { createPortal } from "react-dom";
 import { diaDaEstreia, estaDisponivel, type Serie } from "@/lib/series";
 import { useAgora } from "./useAgora";
 import PlayerEpisodio from "./PlayerEpisodio";
+import ReelsEpisodios from "./ReelsEpisodios";
 
 /** Cartões dos episódios, numerados da esquerda para a direita (episódio 1 primeiro). */
 export default function ListaEpisodios({ serie }: { serie: Serie }) {
   const [aberto, setAberto] = useState<number | null>(null);
   // ao trocar de episódio com o player tocando, o próximo já começa
   const [seguirTocando, setSeguirTocando] = useState(false);
+  // no celular o episódio abre em tela cheia, no estilo Reels; no computador, na janela com as informações
+  const [reels, setReels] = useState(false);
   const ordem = [...serie.episodios].sort((a, b) => a.numero - b.numero);
   const episodio = ordem.find((e) => e.numero === aberto);
   const posicao = episodio ? ordem.indexOf(episodio) : -1;
@@ -35,6 +38,7 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
                 <button
                   onClick={() => {
                     setSeguirTocando(false);
+                    setReels(window.matchMedia("(max-width: 767px)").matches);
                     setAberto(ep.numero);
                   }}
                   data-track={`serie:${serie.slug}:${ep.numero}:abrir`}
@@ -84,15 +88,19 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
 
       {episodio &&
         createPortal(
-        <PlayerEpisodio
-          key={episodio.numero}
-          serie={serie}
-          episodio={episodio}
-          onFechar={() => setAberto(null)}
-          comecarTocando={seguirTocando}
-          onAnterior={posicao > 0 ? (t) => ir(posicao - 1, t) : undefined}
-          onProximo={posicao < ordem.length - 1 ? (t) => ir(posicao + 1, t) : undefined}
-        />,
+          reels ? (
+            <ReelsEpisodios serie={serie} episodios={ordem} inicial={posicao} onFechar={() => setAberto(null)} />
+          ) : (
+            <PlayerEpisodio
+              key={episodio.numero}
+              serie={serie}
+              episodio={episodio}
+              onFechar={() => setAberto(null)}
+              comecarTocando={seguirTocando}
+              onAnterior={posicao > 0 ? (t) => ir(posicao - 1, t) : undefined}
+              onProximo={posicao < ordem.length - 1 ? (t) => ir(posicao + 1, t) : undefined}
+            />
+          ),
           document.body,
         )}
     </>

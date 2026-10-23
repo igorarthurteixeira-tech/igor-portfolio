@@ -66,11 +66,14 @@ export default function PlayerYoutube({
   titulo,
   onAnterior,
   onProximo,
+  reels = false,
 }: {
   videoId: string;
   titulo: string;
   onAnterior?: () => void;
   onProximo?: () => void;
+  /** Modo Reels: vídeo centrado na tela, sem barra de controles (só progresso fino e som). */
+  reels?: boolean;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const alvo = useRef<HTMLDivElement>(null);
@@ -206,6 +209,7 @@ export default function PlayerYoutube({
 
   const pct = duracao > 0 ? Math.min(100, (tempo / duracao) * 100) : 0;
   const icone = "h-5 w-5";
+  const centrado = telaCheia || reels;
 
   return (
     <div
@@ -215,11 +219,11 @@ export default function PlayerYoutube({
     >
       <div
         className={
-          telaCheia
+          centrado
             ? "absolute left-1/2 top-1/2 aspect-[9/16] -translate-x-1/2 -translate-y-1/2 overflow-hidden"
             : "absolute inset-0"
         }
-        style={telaCheia ? { height: "min(100%, 177.78vw)" } : undefined}
+        style={centrado ? { height: "min(100%, 177.78vw)" } : undefined}
       >
       <div
         className="pointer-events-none absolute left-0 w-full"
@@ -260,6 +264,7 @@ export default function PlayerYoutube({
       </button>
 
       {/* controles discretos */}
+      {!reels && (
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-8">
         <div
           role="slider"
@@ -327,7 +332,26 @@ export default function PlayerYoutube({
           </button>
         </div>
       </div>
+      )}
       </div>
+
+      {reels && (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-white/25">
+            <div className="h-full bg-white" style={{ width: `${pct}%` }} />
+          </div>
+          <button
+            onClick={alternarSom}
+            aria-label={mudo ? "Ativar som" : "Silenciar"}
+            className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
+          >
+            <svg viewBox="0 0 24 24" className={icone} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M11 5L6 9H3v6h3l5 4V5z" fill="currentColor" />
+              {mudo ? <path d="M16 9l5 6m0-6l-5 6" /> : <path d="M15.5 8.5a5 5 0 010 7M18 6a8.5 8.5 0 010 12" />}
+            </svg>
+          </button>
+        </>
+      )}
     </div>
   );
 }
