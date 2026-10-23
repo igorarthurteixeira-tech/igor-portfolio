@@ -143,3 +143,44 @@ export function relativo(iso: string | null) {
   const texto = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.round(abs / 60)} h` : `${Math.round(abs / 1440)} d`;
   return min >= 0 ? `em ${texto}` : `há ${texto}`;
 }
+
+export type EstadoPonto = "publicado" | "parcial" | "agendada" | "atencao" | "sem-data";
+export type Ponto = { p: Publicacao; estado: EstadoPonto; quando: string | null };
+
+/** Quando o item aparece na linha do tempo: a primeira publicação feita, ou o agendamento. */
+function quandoDoPonto(p: Publicacao): { quando: string | null; algumaPublicada: boolean } {
+  const feitas = p.redes
+    .filter((r) => p.status_redes[r] === "publicado")
+    .map((r) => p.detalhes_redes?.[r]?.publicado_em)
+    .filter((d): d is string => !!d)
+    .sort();
+  const algumaPublicada = p.redes.some((r) => p.status_redes[r] === "publicado");
+  return { quando: feitas[0] ?? p.agendada_em, algumaPublicada };
+}
+
+/** Separa as publicações em: o que já saiu, o que vem pela frente (em relação a agora) e o que não tem data. */
+export function linhaDoTempo(pubs: Publicacao[]) {
+  const agora = Date.now();
+  const pontos: Ponto[] = pubs.map((p) => {
+    const { quando, algumaPublicada } = quandoDoPonto(p);
+    const estados = p.redes.map((r) => p.status_redes[r]);
+    const atrasada = !!p.agendada_em && Date.parse(p.agendada_em) < agora && estados.includes("pendente");
+    let estado: EstadoPonto;
+    if (concluida(p)) estado = "publicado";
+    else if (algumaPublicada) estado = "parcial";
+    else if (estados.includes("erro") || atrasada) estado = "atencao";
+    else estado = p.agendada_em ? "agendada" : "sem-data";
+    return { p, estado, quando };
+  });
+  const comData = pontos.filter((x) => x.quando).sort((a, b) => Date.parse(a.quando!) - Date.parse(b.quando!));
+  return {
+    passado: comData.filter((x) => Date.parse(x.quando!) <= agora),
+    futuro: comData.filter((x) => Date.parse(x.quando!) > agora),
+    semData: pontos.filter((x) => !x.quando),
+  };
+}
+
+/** "23/10", no fuso de Brasília. */
+export function hojeBR() {
+  return new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
+}

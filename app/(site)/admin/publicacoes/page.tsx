@@ -2,12 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { BUCKET, situacao, type Conexao, type Publicacao, type RedeId } from "@/lib/publicacoes";
+import { BUCKET, concluida, hojeBR, linhaDoTempo, quando, situacao, type Conexao, type Publicacao, type RedeId } from "@/lib/publicacoes";
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
 import ConexoesRedes from "@/components/admin/ConexoesRedes";
 import AgendaSerie from "@/components/admin/AgendaSerie";
 import { agendasDasSeries, catalogoDeSeries, type ItemCatalogo } from "@/lib/series-videos";
+import LinhaDoTempo, { type PontoVisual } from "@/components/admin/LinhaDoTempo";
 import IndicePublicacoes, { type GrupoIndice } from "@/components/admin/IndicePublicacoes";
 
 export const dynamic = "force-dynamic";
@@ -70,9 +71,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
 
   // Miniaturas das capas (links temporários de 1 hora; o bucket é privado).
   const miniaturas: Record<string, string> = {};
-  const capas = (aba === "nova" ? [] : aba === "fila" ? fila : concluidas)
-    .map((p) => p.capa_path)
-    .filter((c): c is string => !!c);
+  const capas = todas.map((p) => p.capa_path).filter((c): c is string => !!c);
   if (db && capas.length > 0) {
     const { data: urls } = await db.storage.from(BUCKET).createSignedUrls(capas, 3600);
     for (const u of urls ?? []) if (u.path && u.signedUrl) miniaturas[u.path] = u.signedUrl;
@@ -107,6 +106,18 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
     const { serie, n } = epDe(p);
     return p.episodio ? `${serie?.titulo ?? p.episodio.split(":")[0]} · Ep. ${n}` : undefined;
   };
+
+  const SIGLAS: Record<string, string> = { instagram: "IG", youtube: "YT", linkedin: "in", tiktok: "TT" };
+  const tempo = linhaDoTempo(todas);
+  const visual = (x: (typeof tempo.passado)[number]): PontoVisual => ({
+    id: x.p.id,
+    rotulo: rotuloSite(x.p) ?? x.p.titulo,
+    estado: x.estado,
+    data: x.quando ? quando(x.quando) : "sem data",
+    miniatura: x.p.capa_path ? miniaturas[x.p.capa_path] : undefined,
+    redes: x.p.redes.map((r) => ({ sigla: SIGLAS[r] ?? r, status: x.p.status_redes[r] ?? "pendente" })),
+    aba: concluida(x.p) ? "concluidas" : "fila",
+  });
 
   const lista = (itens: Publicacao[], vazio: string) => {
     if (itens.length === 0) return <div className="card p-8 text-center text-slate-500">{vazio}</div>;
@@ -165,6 +176,13 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
           </p>
         ) : (
           <>
+            <LinhaDoTempo
+              passado={tempo.passado.map(visual)}
+              futuro={tempo.futuro.map(visual)}
+              semData={tempo.semData.map(visual)}
+              hoje={hojeBR()}
+            />
+
             <details open={faltaConectar} className="card group mb-5">
               <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-3.5">
                 <span className="font-semibold text-fg">Conexões</span>

@@ -83,7 +83,7 @@ export const series: Serie[] = [
         resumo:
           "A planilha trava, o Seu Sérgio jura que funciona e a gerente ameaça o emprego da Camila.",
         duracao: "1:27",
-        poster: "/series/expediente-ep1.jpg",
+        poster: "/series/expediente-ep1-capa.jpg",
       },
       {
         numero: 2,
@@ -91,7 +91,7 @@ export const series: Serie[] = [
         resumo:
           "Trezentas e oitenta linhas copiadas à mão, três versões do mesmo arquivo e uma mensagem enviada ao grupo errado.",
         duracao: "1:34",
-        poster: "/series/expediente-ep2.jpg",
+        poster: "/series/expediente-ep2-capa.jpg",
       },
       {
         numero: 3,
@@ -99,7 +99,7 @@ export const series: Serie[] = [
         resumo:
           "Faltam dois minutos para o prazo e o Kevin apaga o arquivo. O dono demite o estagiário, que nem registro tem.",
         duracao: "1:20",
-        poster: "/series/expediente-ep3.jpg",
+        poster: "/series/expediente-ep3-capa.jpg",
       },
       {
         numero: 4,
@@ -107,7 +107,7 @@ export const series: Serie[] = [
         resumo:
           "O backup é de março, o cliente cancela e o dono demite todo mundo. Menos o Tadeu, calmo demais.",
         duracao: "1:26",
-        poster: "/series/expediente-ep4.jpg",
+        poster: "/series/expediente-ep4-capa.jpg",
       },
       {
         numero: 5,
@@ -115,7 +115,7 @@ export const series: Serie[] = [
         resumo:
           "O Tadeu mostra o chamado que o dono arquivou em março e o sistema que guardou tudo até 17h57.",
         duracao: "1:38",
-        poster: "/series/expediente-ep5.jpg",
+        poster: "/series/expediente-ep5-capa.jpg",
       },
     ],
   },
@@ -144,7 +144,7 @@ export const series: Serie[] = [
         resumo:
           "O Marcelo está de férias, a senha é “a mesma de sempre” e o Beto, o primo da informática, resolve ajudar.",
         duracao: "1:21",
-        poster: "/series/padaria-da-rosa-ep1.jpg",
+        poster: "/series/padaria-da-rosa-ep1-capa.jpg",
         arquivoLocal: "/series/padaria-da-rosa-ep1.mp4",
       },
       {
@@ -153,7 +153,7 @@ export const series: Serie[] = [
         resumo:
           "A Rosa desabafa com uma amiga, descobre que dá para testar um sistema antes de pagar e a equipe reage.",
         duracao: "1:22",
-        poster: "/series/padaria-da-rosa-ep2.jpg",
+        poster: "/series/padaria-da-rosa-ep2-capa.jpg",
         arquivoLocal: "/series/padaria-da-rosa-ep2.mp4",
       },
       {
@@ -162,7 +162,7 @@ export const series: Serie[] = [
         resumo:
           "O Seu Zé jura que pagou, o caderninho do fiado está encharcado de café e o Beto, claro, tenta ajudar.",
         duracao: "0:48",
-        poster: "/series/padaria-da-rosa-ep3.jpg",
+        poster: "/series/padaria-da-rosa-ep3-capa.jpg",
         arquivoLocal: "/series/padaria-da-rosa-ep3.mp4",
       },
     ],
