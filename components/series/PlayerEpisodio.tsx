@@ -150,7 +150,7 @@ export default function PlayerEpisodio({
       aria-label={`Episódio ${episodio.numero}: ${episodio.titulo}`}
       onMouseDown={(e) => e.target === e.currentTarget && onFechar()}
     >
-      <div className="relative flex max-h-full w-full max-w-4xl flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl md:flex-row md:overflow-hidden">
+      <div className="relative flex max-h-full w-full max-w-[1100px] flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl md:flex-row md:overflow-hidden">
         <button
           onClick={onFechar}
           aria-label="Fechar"
@@ -160,7 +160,7 @@ export default function PlayerEpisodio({
         </button>
 
         {/* vídeo (vertical) */}
-        <div className="relative mx-auto aspect-[9/16] w-[min(50vw,240px)] shrink-0 self-center bg-black md:w-[340px]">
+        <div className="relative mx-auto aspect-[9/16] w-[min(72vw,300px)] shrink-0 self-center bg-black md:mx-0 md:h-[min(90vh,900px)] md:w-auto">
           {tocando && episodio.youtubeId ? (
             <PlayerYoutube videoId={episodio.youtubeId} titulo={episodio.titulo} />
           ) : tocando && arquivo ? (
