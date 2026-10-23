@@ -4,6 +4,8 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import * as ig from "@/lib/redes/instagram";
+import { executarRede } from "@/lib/redes/executar";
 import {
   BUCKET,
   LIMITE_ARQUIVO,
@@ -119,4 +121,61 @@ export async function linkDoArquivo(path: string): Promise<Resultado<{ url: stri
   const { data, error } = await db.storage.from(BUCKET).createSignedUrl(path, 3600);
   if (error || !data) return { ok: false, erro: "Arquivo não encontrado." };
   return { ok: true, url: data.signedUrl };
+}
+
+/** Guarda o token do Instagram (só no servidor) depois de conferir que ele funciona. */
+export async function conectarInstagram(token: string): Promise<Resultado<{ conta: string; expiraEm: string }>> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  const limpo = String(token ?? "").trim();
+  if (limpo.length < 40) return { ok: false, erro: "Esse texto não parece um token do Instagram." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+
+  let conta;
+  try {
+    conta = await ig.validarToken(limpo);
+  } catch (e) {
+    return { ok: false, erro: `O Instagram recusou o token: ${e instanceof Error ? e.message : "erro"}` };
+  }
+
+  let tokenFinal = limpo;
+  let expiraEm = new Date(Date.now() + 59 * 86400000).toISOString();
+  try {
+    const novo = await ig.renovarToken(limpo);
+    tokenFinal = novo.token;
+    expiraEm = novo.expiraEm;
+  } catch {
+    // token recém-gerado (menos de 24 h): assume 60 dias, e a renovação acontece depois
+  }
+
+  const { error } = await db.from("redes_conexoes").upsert({
+    rede: "instagram",
+    conta_id: conta.contaId,
+    conta_nome: conta.usuario,
+    token: tokenFinal,
+    expira_em: expiraEm,
+    atualizado_em: new Date().toISOString(),
+  });
+  if (error) return { ok: false, erro: "Não foi possível guardar a conexão. A tabela redes_conexoes existe?" };
+  revalidatePath("/admin/publicacoes");
+  return { ok: true, conta: conta.usuario, expiraEm };
+}
+
+export async function desconectarRede(rede: string): Promise<Resultado> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  if (!idsRedes.has(rede)) return { ok: false, erro: "Rede inválida." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  await db.from("redes_conexoes").delete().eq("rede", rede);
+  revalidatePath("/admin/publicacoes");
+  return { ok: true };
+}
+
+/** Publica agora numa rede (Instagram por enquanto). Pode levar até cerca de 50 segundos. */
+export async function publicarAgora(id: string, rede: string): Promise<Resultado<{ mensagem: string; estado: string }>> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  if (!idsRedes.has(rede)) return { ok: false, erro: "Rede inválida." };
+  const r = await executarRede(id, rede as RedeId, 45_000);
+  revalidatePath("/admin/publicacoes");
+  return { ok: true, mensagem: r.mensagem, estado: r.estado };
 }

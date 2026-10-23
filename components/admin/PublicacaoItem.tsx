@@ -1,17 +1,36 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { REDES, concluida, quando, type Publicacao, type RedeId, type StatusRede } from "@/lib/publicacoes";
-import { apagarVideo, excluirPublicacao, linkDoArquivo, marcarRede } from "@/app/(site)/admin/publicacoes/actions";
+import {
+  REDES,
+  concluida,
+  quando,
+  type Publicacao,
+  type RedeId,
+  type StatusRede,
+} from "@/lib/publicacoes";
+import {
+  apagarVideo,
+  excluirPublicacao,
+  linkDoArquivo,
+  marcarRede,
+  publicarAgora,
+} from "@/app/(site)/admin/publicacoes/actions";
 
 const COR: Record<StatusRede, string> = {
   pendente: "bg-amber-100 text-amber-800",
+  processando: "bg-sky-100 text-sky-800",
   publicado: "bg-emerald-100 text-emerald-800",
   erro: "bg-red-100 text-red-700",
 };
-const ROTULO: Record<StatusRede, string> = { pendente: "Pendente", publicado: "Publicado", erro: "Erro" };
+const ROTULO: Record<StatusRede, string> = {
+  pendente: "Pendente",
+  processando: "Processando",
+  publicado: "Publicado",
+  erro: "Erro",
+};
 
-export default function PublicacaoItem({ p }: { p: Publicacao }) {
+export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conectadas: RedeId[] }) {
   const [pendente, iniciar] = useTransition();
   const [aviso, setAviso] = useState<string | null>(null);
   const botao =
@@ -38,8 +57,17 @@ export default function PublicacaoItem({ p }: { p: Publicacao }) {
     return (atual === "publicado" ? "pendente" : "publicado") as StatusRede;
   };
 
+  function publicar(rede: RedeId, nome: string) {
+    if (!confirm(`Publicar agora no ${nome}? A postagem vai ao ar de verdade, na sua conta.`)) return;
+    setAviso(`Enviando ao ${nome}… pode levar até um minuto.`);
+    iniciar(async () => {
+      const r = await publicarAgora(p.id, rede);
+      setAviso(r.ok ? r.mensagem : r.erro);
+    });
+  }
+
   return (
-    <li className={`card p-5 ${concluida(p) ? "opacity-70" : ""} ${pendente ? "opacity-50" : ""}`}>
+    <li className={`card p-5 ${concluida(p) ? "opacity-70" : ""} ${pendente ? "opacity-60" : ""}`}>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4">
         <p className="font-semibold text-fg">{p.titulo}</p>
         <span className="text-sm font-medium text-accent-strong">{quando(p.agendada_em)}</span>
@@ -49,6 +77,8 @@ export default function PublicacaoItem({ p }: { p: Publicacao }) {
         {REDES.filter((r) => p.redes.includes(r.id)).map((r) => {
           const status = p.status_redes[r.id] ?? "pendente";
           const t = p.textos[r.id];
+          const det = p.detalhes_redes?.[r.id];
+          const podeAutomatico = r.automatica && conectadas.includes(r.id) && !!p.video_path;
           return (
             <div key={r.id} className="rounded-xl border border-line p-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -57,6 +87,19 @@ export default function PublicacaoItem({ p }: { p: Publicacao }) {
                   {ROTULO[status]}
                 </span>
                 <div className="ml-auto flex flex-wrap gap-2">
+                  {podeAutomatico && status !== "publicado" && (
+                    <button
+                      className="rounded-lg bg-accent-strong px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent disabled:opacity-50"
+                      disabled={pendente}
+                      onClick={() => publicar(r.id, r.nome)}
+                    >
+                      {status === "processando"
+                        ? "Verificar andamento"
+                        : status === "erro"
+                          ? "Tentar de novo"
+                          : "Publicar agora"}
+                    </button>
+                  )}
                   {r.titulo && t?.titulo && (
                     <button className={botao} onClick={() => copiar(t.titulo ?? "", "Título")}>
                       Copiar título
@@ -77,6 +120,19 @@ export default function PublicacaoItem({ p }: { p: Publicacao }) {
               </div>
               {t?.legenda && (
                 <p className="mt-2 line-clamp-2 whitespace-pre-line text-xs text-muted">{t.legenda}</p>
+              )}
+              {status === "erro" && det?.erro && (
+                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{det.erro}</p>
+              )}
+              {status === "publicado" && det?.permalink && (
+                <a
+                  href={det.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-xs font-medium text-accent-strong hover:underline"
+                >
+                  Ver a publicação →
+                </a>
               )}
             </div>
           );
@@ -113,7 +169,7 @@ export default function PublicacaoItem({ p }: { p: Publicacao }) {
         >
           Excluir
         </button>
-        {aviso && <span className="w-full text-xs text-emerald-700">{aviso}</span>}
+        {aviso && <span className="w-full text-xs text-slate-600">{aviso}</span>}
       </div>
     </li>
   );

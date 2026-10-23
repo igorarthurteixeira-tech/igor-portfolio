@@ -2,11 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { concluida, type Publicacao } from "@/lib/publicacoes";
+import { concluida, type Conexao, type Publicacao, type RedeId } from "@/lib/publicacoes";
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
+import ConexoesRedes from "@/components/admin/ConexoesRedes";
 
 export const dynamic = "force-dynamic";
+// "Publicar agora" espera o Instagram processar o vídeo (até cerca de 50 s)
+export const maxDuration = 60;
 
 export default async function PublicacoesPage() {
   if (!(await getAdminUser())) redirect("/admin/login");
@@ -19,6 +22,13 @@ export default async function PublicacoesPage() {
         .order("agendada_em", { ascending: true, nullsFirst: false })
         .limit(300)
     : { data: null, error: { message: "sem banco" } };
+
+  // O token nunca sai do servidor: só nome da conta e validade vão para a tela.
+  const { data: con } = db
+    ? await db.from("redes_conexoes").select("rede,conta_nome,expira_em")
+    : { data: null };
+  const conexoes = (con ?? []) as Conexao[];
+  const conectadas = conexoes.map((c) => c.rede as RedeId);
 
   const todas = (data ?? []) as Publicacao[];
   const abertas = todas.filter((p) => !concluida(p));
@@ -42,11 +52,16 @@ export default async function PublicacoesPage() {
 
         {error ? (
           <p className="mb-10 rounded-lg bg-amber-100 px-4 py-3 text-sm text-amber-800">
-            A tabela de publicações ainda não existe. Rode o arquivo{" "}
-            <code>supabase/migrations/20261022010000_publicacoes.sql</code> no SQL Editor do Supabase.
+            A tabela de publicações ainda não existe. Rode os arquivos{" "}
+            <code>supabase/migrations/20261022010000_publicacoes.sql</code> e{" "}
+            <code>supabase/migrations/20261023000000_redes_conexoes.sql</code> no SQL Editor do
+            Supabase.
           </p>
         ) : (
-          <FormPublicacao />
+          <>
+            <ConexoesRedes conexoes={conexoes} />
+            <FormPublicacao />
+          </>
         )}
 
         <h2 className="mb-4 text-xl font-bold text-fg">Na fila ({abertas.length})</h2>
@@ -55,7 +70,7 @@ export default async function PublicacoesPage() {
         ) : (
           <ul className="mb-10 space-y-4">
             {abertas.map((p) => (
-              <PublicacaoItem key={p.id} p={p} />
+              <PublicacaoItem key={p.id} p={p} conectadas={conectadas} />
             ))}
           </ul>
         )}
@@ -65,7 +80,7 @@ export default async function PublicacoesPage() {
             <h2 className="mb-4 text-xl font-bold text-fg">Concluídas ({feitas.length})</h2>
             <ul className="space-y-4">
               {feitas.map((p) => (
-                <PublicacaoItem key={p.id} p={p} />
+                <PublicacaoItem key={p.id} p={p} conectadas={conectadas} />
               ))}
             </ul>
           </>

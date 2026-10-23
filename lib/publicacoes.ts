@@ -3,16 +3,24 @@ export const LIMITE_ARQUIVO = 50 * 1024 * 1024;
 
 export type RedeId = "instagram" | "youtube" | "linkedin" | "tiktok";
 
-export const REDES: { id: RedeId; nome: string; titulo: boolean }[] = [
-  { id: "instagram", nome: "Instagram", titulo: false },
-  { id: "youtube", nome: "YouTube", titulo: true },
-  { id: "linkedin", nome: "LinkedIn", titulo: false },
-  { id: "tiktok", nome: "TikTok", titulo: false },
+export const REDES: { id: RedeId; nome: string; titulo: boolean; automatica: boolean }[] = [
+  { id: "instagram", nome: "Instagram", titulo: false, automatica: true },
+  { id: "youtube", nome: "YouTube", titulo: true, automatica: false },
+  { id: "linkedin", nome: "LinkedIn", titulo: false, automatica: false },
+  { id: "tiktok", nome: "TikTok", titulo: false, automatica: false },
 ];
 
-export type StatusRede = "pendente" | "publicado" | "erro";
+export type StatusRede = "pendente" | "processando" | "publicado" | "erro";
 
 export type Textos = Partial<Record<RedeId, { titulo?: string; legenda?: string }>>;
+
+export type Detalhe = {
+  container_id?: string;
+  media_id?: string;
+  permalink?: string | null;
+  erro?: string;
+  publicado_em?: string;
+};
 
 export type Publicacao = {
   id: string;
@@ -23,8 +31,11 @@ export type Publicacao = {
   video_path: string | null;
   capa_path: string | null;
   status_redes: Partial<Record<RedeId, StatusRede>>;
+  detalhes_redes: Partial<Record<RedeId, Detalhe>>;
   criado_em: string;
 };
+
+export type Conexao = { rede: RedeId; conta_nome: string | null; expira_em: string | null };
 
 export const idsRedes = new Set<string>(REDES.map((r) => r.id));
 
@@ -50,4 +61,9 @@ export function localParaIso(valor: string) {
 
 export function concluida(p: Publicacao) {
   return p.redes.length > 0 && p.redes.every((r) => p.status_redes[r] === "publicado");
+}
+
+export function diasRestantes(iso: string | null) {
+  if (!iso) return null;
+  return Math.max(0, Math.ceil((Date.parse(iso) - Date.now()) / 86400000));
 }
