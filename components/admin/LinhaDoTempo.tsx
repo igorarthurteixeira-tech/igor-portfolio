@@ -46,7 +46,7 @@ const REDE: Record<PontoVisual["redes"][number]["status"], string> = {
 
 function Cartao({ p }: { p: PontoVisual }) {
   return (
-    <li className="relative w-[112px] shrink-0 pt-6">
+    <li className="relative w-[184px] shrink-0 pt-6">
       <span
         aria-hidden
         className={`absolute left-1/2 top-1.5 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 border-white ${BOLA[p.estado]}`}
@@ -57,19 +57,19 @@ function Cartao({ p }: { p: PontoVisual }) {
         className="group block text-center"
       >
         <span
-          className={`mx-auto block h-[150px] w-[84px] overflow-hidden rounded-lg bg-slate-200 ring-2 ring-offset-2 ring-offset-white transition group-hover:-translate-y-0.5 group-hover:shadow-lg ${ANEL[p.estado]} ${
+          className={`mx-auto block h-[288px] w-[162px] overflow-hidden rounded-lg bg-slate-200 ring-2 ring-offset-2 ring-offset-white transition group-hover:-translate-y-0.5 group-hover:shadow-lg ${ANEL[p.estado]} ${
             p.estado === "sem-data" ? "opacity-80" : ""
           }`}
         >
           {p.miniatura ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.miniatura} alt="" width={84} height={150} loading="lazy" className="h-full w-full object-cover" />
+            <img src={p.miniatura} alt="" width={324} height={576} loading="lazy" className="h-full w-full object-cover" />
           ) : (
             <span className="flex h-full items-center justify-center text-[10px] text-slate-400">sem capa</span>
           )}
         </span>
-        <span className="mt-2 line-clamp-2 block text-[11px] font-semibold leading-tight text-fg">{p.rotulo}</span>
-        <span className="mt-0.5 block text-[10px] text-slate-500">{p.data}</span>
+        <span className="mt-2 line-clamp-2 block text-xs font-semibold leading-tight text-fg">{p.rotulo}</span>
+        <span className="mt-0.5 block text-[11px] text-slate-500">{p.data}</span>
         <span className="mt-1 flex justify-center gap-1">
           {p.redes.map((r) => (
             <span key={r.sigla} className={`rounded px-1 text-[9px] font-bold leading-4 ${REDE[r.status]}`}>
@@ -123,7 +123,7 @@ export default function LinhaDoTempo({
         </ul>
       </div>
       <div ref={rolagem} className="overflow-x-auto pb-2 [scrollbar-width:thin]">
-        <ol className="relative flex min-w-max gap-3 before:absolute before:left-0 before:right-0 before:top-[13px] before:h-0.5 before:bg-slate-200">
+        <ol className="relative flex min-w-max gap-4 before:absolute before:left-0 before:right-0 before:top-[13px] before:h-0.5 before:bg-slate-200">
           {passado.map((p) => (
             <Cartao key={p.id} p={p} />
           ))}
@@ -131,7 +131,7 @@ export default function LinhaDoTempo({
             <span className="relative z-10 whitespace-nowrap rounded-full bg-accent-strong px-3 py-1 text-[11px] font-bold text-white shadow">
               Hoje · {hoje}
             </span>
-            <span aria-hidden className="mt-1 h-[190px] w-0 border-l-2 border-dashed border-accent-strong/60" />
+            <span aria-hidden className="mt-1 h-[340px] w-0 border-l-2 border-dashed border-accent-strong/60" />
           </li>
           {futuro.map((p) => (
             <Cartao key={p.id} p={p} />
@@ -139,7 +139,7 @@ export default function LinhaDoTempo({
           {semData.length > 0 && (
             <li aria-hidden className="relative flex w-10 shrink-0 flex-col items-center pt-1">
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">sem data</span>
-              <span className="mt-1 h-[190px] w-0 border-l-2 border-dotted border-slate-300" />
+              <span className="mt-1 h-[340px] w-0 border-l-2 border-dotted border-slate-300" />
             </li>
           )}
           {semData.map((p) => (
