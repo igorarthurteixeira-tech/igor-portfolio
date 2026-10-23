@@ -167,6 +167,62 @@ export const series: Serie[] = [
       },
     ],
   },
+  {
+    slug: "salao-reservado",
+    titulo: "Salão Reservado",
+    chamada: "Um caderno, seis vizinhos e zero paz.",
+    descricao:
+      "Num prédio comum, o salão de festas e a churrasqueira são reservados num caderno que o zelador guarda na portaria. Entre o síndico, a vizinha do 202 e o morador do churrasco, cada reserva dobrada vira uma vingança. Só o morador do 504 parece calmo. Cinco episódios de confusão, indiretas e uma virada.",
+    capa: "/series/salao-reservado-capa.jpg",
+    chat: {
+      titulo: "Edifício Bela Vista",
+      icone: "🏠",
+      mensagens: [
+        { autor: "Juliana", cargo: "Ap. 401", texto: "Sábado o salão é meu. Festa do Pedro!", lado: "out" },
+        { autor: "Rafael", cargo: "Ap. 302", texto: "Opa. O salão é MEU 🍖", lado: "in" },
+        { autor: "Cleber", cargo: "Zelador", texto: "Os dois estão anotados. No mesmo horário.", lado: "in" },
+        { autor: "Dona Marlene", cargo: "Ap. 202", texto: "Artigo 9 do regimento.", lado: "in" },
+        { texto: "ERA PARTICULAR!!!", lado: "out" },
+      ],
+    },
+    episodios: [
+      {
+        numero: 1,
+        titulo: "Dois aniversários, um salão",
+        resumo: "Dois moradores reservaram o salão no mesmo sábado, e cada um jura que foi primeiro.",
+        duracao: "1:32",
+        poster: "/series/salao-reservado-ep1.jpg",
+      },
+      {
+        numero: 2,
+        titulo: "A vingança da churrasqueira",
+        resumo: "A churrasqueira vira arma, o regimento vira prova e ninguém concorda sobre o artigo 14.",
+        duracao: "1:36",
+        poster: "/series/salao-reservado-ep2.jpg",
+      },
+      {
+        numero: 3,
+        titulo: "O caderno sumiu",
+        resumo: "Sem o caderno, ninguém prova nada, e todo mundo acusa todo mundo.",
+        duracao: "1:43",
+        poster: "/series/salao-reservado-ep3.jpg",
+      },
+      {
+        numero: 4,
+        titulo: "Assembleia extraordinária",
+        resumo: "Três festas ao mesmo tempo, uma janela e um palhaço na portaria.",
+        duracao: "1:39",
+        poster: "/series/salao-reservado-ep4.jpg",
+      },
+      {
+        numero: 5,
+        titulo: "Reservado",
+        resumo: "O morador do 504 finalmente escreve no grupo.",
+        duracao: "1:53",
+        poster: "/series/salao-reservado-ep5.jpg",
+      },
+    ],
+  },
 ];
 
 export const idEpisodio = (serie: string, numero: number) => `${serie}:${numero}`;

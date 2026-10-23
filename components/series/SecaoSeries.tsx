@@ -120,9 +120,9 @@ export default async function SecaoSeries() {
 
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-12 max-w-2xl">
-          <p className="eyebrow-dark">Séries de ficção</p>
+          <p className="eyebrow-dark">Vida de Dono</p>
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-white md:text-4xl">
-            Vida de <span className="text-gradient">Dono</span>
+            <span className="text-gradient">Séries</span>
           </h2>
           <p className="text-lg leading-relaxed text-slate-300">
             Histórias inventadas sobre problemas reais de quem toca um negócio. Para dar risada e,

@@ -8,22 +8,19 @@ import { abrirChat as abrirChatGlobal } from "@/lib/chat";
 function RotuloLink({ label, play }: { label: string; play?: boolean }) {
   if (!play) return <>{label}</>;
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-2.5 font-semibold">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-strong text-white shadow-md shadow-accent/50 transition group-hover:scale-110">
+        <svg viewBox="0 0 24 24" className="ml-0.5 h-3.5 w-3.5" fill="currentColor" aria-hidden>
+          <path d="M6 3.5v17a1 1 0 001.5.9l14-8.5a1 1 0 000-1.8l-14-8.5A1 1 0 006 3.5z" />
+        </svg>
+      </span>
       {label}
-      <svg
-        viewBox="0 0 24 24"
-        className="h-4 w-4 text-accent-light"
-        fill="currentColor"
-        aria-hidden
-      >
-        <path d="M6 3.5v17a1 1 0 001.5.9l14-8.5a1 1 0 000-1.8l-14-8.5A1 1 0 006 3.5z" />
-      </svg>
     </span>
   );
 }
 
 const links: { href: string; label: string; play?: boolean }[] = [
-  { href: "/#vida-de-dono", label: "Vida de Dono", play: true },
+  { href: "/#vida-de-dono", label: "Séries", play: true },
   { href: "/#sobre", label: "Sobre" },
   { href: "/#como-contratar", label: "Como contratar" },
   { href: "/#projetos", label: "Projetos" },
@@ -99,7 +96,11 @@ export default function Navbar() {
                 key={l.href}
                 href={l.href}
                 onClick={(e) => irParaSecao(e, l.href)}
-                className="rounded-lg px-3 py-2 text-slate-200 transition hover:bg-white/10 hover:text-white"
+                className={
+                  l.play
+                    ? "group mr-1 rounded-full border border-white/20 bg-white/10 py-1 pl-1.5 pr-4 text-white transition hover:border-accent-light/60 hover:bg-white/20"
+                    : "rounded-lg px-3 py-2 text-slate-200 transition hover:bg-white/10 hover:text-white"
+                }
               >
                 <RotuloLink label={l.label} play={l.play} />
               </Link>
@@ -159,7 +160,11 @@ export default function Navbar() {
                   key={l.href}
                   href={l.href}
                   onClick={(e) => irParaSecao(e, l.href)}
-                  className="rounded-lg px-3 py-3 text-slate-200 transition hover:bg-white/10 hover:text-white"
+                  className={
+                    l.play
+                      ? "group w-fit rounded-full border border-white/20 bg-white/10 py-1.5 pl-2 pr-5 text-white transition hover:bg-white/20"
+                      : "rounded-lg px-3 py-3 text-slate-200 transition hover:bg-white/10 hover:text-white"
+                  }
                 >
                   <RotuloLink label={l.label} play={l.play} />
                 </Link>

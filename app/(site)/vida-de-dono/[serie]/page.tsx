@@ -55,7 +55,7 @@ export default async function SeriePage({
               href="/#vida-de-dono"
               className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white"
             >
-              <span aria-hidden>←</span> Vida de Dono
+              <span aria-hidden>←</span> Séries
             </Link>
           </div>
           <p className="eyebrow-dark">Série de ficção</p>

@@ -172,3 +172,9 @@ section[id] {
     animation: none;
   }
 }
+
+/* O menu fixo ocupa 4rem no topo do documento. Ao trocar de página, o Next rola até o primeiro
+   elemento da página; sem esta margem a rolagem para em 4rem e o topo da página fica escondido. */
+main > * {
+  scroll-margin-top: 4rem;
+}

@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 import ChatBubble from "@/components/ChatBubble";
+import PalavraChave from "@/components/PalavraChave";
 import { site } from "@/lib/site";
 
 const jsonLd = {
@@ -24,6 +25,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
+      <PalavraChave />
       <div aria-hidden className="h-16 bg-brand" />
       <main className="grow">{children}</main>
       <Footer />
