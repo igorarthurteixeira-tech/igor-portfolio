@@ -147,7 +147,7 @@ export default function PlayerEpisodio({
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label={`Episódio ${episodio.numero}: ${episodio.titulo}`}
+      aria-label={temVideo ? `Episódio ${episodio.numero}: ${episodio.titulo}` : `Episódio ${episodio.numero}, em breve`}
       onMouseDown={(e) => e.target === e.currentTarget && onFechar()}
     >
       <div className="relative flex max-h-full w-full max-w-[1100px] flex-col overflow-y-auto rounded-2xl bg-white shadow-2xl md:flex-row md:overflow-hidden">
@@ -167,7 +167,13 @@ export default function PlayerEpisodio({
             <video className="absolute inset-0 h-full w-full" src={arquivo} controls autoPlay playsInline />
           ) : (
             <>
-              <Image src={episodio.poster} alt="" fill sizes="340px" className="object-cover" />
+              <Image
+                src={episodio.poster}
+                alt=""
+                fill
+                sizes="340px"
+                className={`object-cover ${temVideo ? "" : "scale-110 blur-xl"}`}
+              />
               <div className="absolute inset-0 bg-black/30" />
               {temVideo ? (
                 <button
@@ -194,8 +200,10 @@ export default function PlayerEpisodio({
           <p className="eyebrow mb-1">
             {serie.titulo} · Episódio {episodio.numero}
           </p>
-          <h2 className="text-2xl font-bold tracking-tight text-fg">{episodio.titulo}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{episodio.resumo}</p>
+          <h2 className="text-2xl font-bold tracking-tight text-fg">
+            {temVideo ? episodio.titulo : `Episódio ${episodio.numero}`}
+          </h2>
+          {temVideo && <p className="mt-2 text-sm leading-relaxed text-muted">{episodio.resumo}</p>}
           <p className="mt-2 text-xs text-slate-500">Duração: {episodio.duracao} · História fictícia, problema real.</p>
 
           {!temVideo && (

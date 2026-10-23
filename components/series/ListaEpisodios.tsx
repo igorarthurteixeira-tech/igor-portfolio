@@ -27,7 +27,7 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
                   onClick={() => setAberto(ep.numero)}
                   data-track={`serie:${serie.slug}:${ep.numero}:abrir`}
                   className="card card-hover group block w-full overflow-hidden text-left"
-                  aria-label={`Episódio ${ep.numero}: ${ep.titulo}`}
+                  aria-label={disponivel ? `Episódio ${ep.numero}: ${ep.titulo}` : `Episódio ${ep.numero}, em breve`}
                 >
                   <div className="relative aspect-[9/16] w-full bg-brand">
                     <Image
@@ -35,7 +35,9 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
                       alt=""
                       fill
                       sizes="(min-width:1024px) 280px, (min-width:640px) 30vw, 46vw"
-                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      className={`object-cover transition duration-500 ${
+                        disponivel ? "group-hover:scale-[1.03]" : "scale-110 blur-xl"
+                      }`}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
                     <span className="absolute left-3 top-3 rounded-lg bg-brand/90 px-3 py-1.5 text-sm font-extrabold tracking-wider text-white">
@@ -58,7 +60,7 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
                     )}
                   </div>
                   <div className="p-4">
-                    <p className="text-sm font-semibold leading-snug text-fg">{ep.titulo}</p>
+                    <p className="text-sm font-semibold leading-snug text-fg">{disponivel ? ep.titulo : `Episódio ${ep.numero}`}</p>
                   </div>
                 </button>
               </li>
