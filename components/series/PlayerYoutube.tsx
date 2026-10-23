@@ -61,7 +61,17 @@ const FAIXA = 150;
 const hora = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 /** Player do YouTube sem a interface do YouTube por cima: só o vídeo e controles discretos. */
-export default function PlayerYoutube({ videoId, titulo }: { videoId: string; titulo: string }) {
+export default function PlayerYoutube({
+  videoId,
+  titulo,
+  onAnterior,
+  onProximo,
+}: {
+  videoId: string;
+  titulo: string;
+  onAnterior?: () => void;
+  onProximo?: () => void;
+}) {
   const caixa = useRef<HTMLDivElement>(null);
   const alvo = useRef<HTMLDivElement>(null);
   const player = useRef<YTPlayer | null>(null);
@@ -71,7 +81,9 @@ export default function PlayerYoutube({ videoId, titulo }: { videoId: string; ti
   const [mudo, setMudo] = useState(false);
   const [tempo, setTempo] = useState(0);
   const [duracao, setDuracao] = useState(0);
+  // "Tela cheia" própria (a página cobre a tela toda): o iPhone não deixa um <div> entrar em tela cheia nativa.
   const [telaCheia, setTelaCheia] = useState(false);
+  const nativa = useRef(false);
 
   useEffect(() => {
     let vivo = true;
@@ -120,11 +132,29 @@ export default function PlayerYoutube({ videoId, titulo }: { videoId: string; ti
     return () => clearInterval(t);
   }, [tocando]);
 
+  // Saiu da tela cheia nativa pelo gesto do sistema (voltar, deslizar): sai do modo também.
   useEffect(() => {
-    const mudou = () => setTelaCheia(document.fullscreenElement === caixa.current);
+    const mudou = () => {
+      if (!document.fullscreenElement && nativa.current) {
+        nativa.current = false;
+        setTelaCheia(false);
+      }
+    };
     document.addEventListener("fullscreenchange", mudou);
     return () => document.removeEventListener("fullscreenchange", mudou);
   }, []);
+
+  // Esc sai da tela cheia antes de fechar o player.
+  useEffect(() => {
+    if (!telaCheia) return;
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      sairTelaCheia();
+    };
+    window.addEventListener("keydown", tecla, true);
+    return () => window.removeEventListener("keydown", tecla, true);
+  }, [telaCheia]);
 
   const alternar = useCallback(() => {
     const p = player.current;
@@ -157,22 +187,56 @@ export default function PlayerYoutube({ videoId, titulo }: { videoId: string; ti
     }
   }
 
-  function alternarTelaCheia() {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void caixa.current?.requestFullscreen?.();
+  function entrarTelaCheia() {
+    setTelaCheia(true);
+    const el = caixa.current;
+    if (el?.requestFullscreen) {
+      nativa.current = true;
+      el.requestFullscreen().catch(() => {
+        nativa.current = false;
+      });
+    }
+  }
+
+  function sairTelaCheia() {
+    nativa.current = false;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    setTelaCheia(false);
   }
 
   const pct = duracao > 0 ? Math.min(100, (tempo / duracao) * 100) : 0;
   const icone = "h-5 w-5";
 
   return (
-    <div ref={caixa} className="absolute inset-0 overflow-hidden bg-black" aria-label={titulo}>
+    <div
+      ref={caixa}
+      className={`overflow-hidden bg-black ${telaCheia ? "fixed inset-0 z-[80]" : "absolute inset-0"}`}
+      aria-label={titulo}
+    >
+      <div
+        className={
+          telaCheia
+            ? "absolute left-1/2 top-1/2 aspect-[9/16] -translate-x-1/2 -translate-y-1/2 overflow-hidden"
+            : "absolute inset-0"
+        }
+        style={telaCheia ? { height: "min(100%, 177.78vw)" } : undefined}
+      >
       <div
         className="pointer-events-none absolute left-0 w-full"
         style={{ top: -FAIXA, height: `calc(100% + ${FAIXA * 2}px)` }}
       >
         <div ref={alvo} className="h-full w-full" />
       </div>
+
+      {telaCheia && (
+        <button
+          onClick={sairTelaCheia}
+          aria-label="Sair da tela cheia"
+          className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-xl text-white backdrop-blur-sm"
+        >
+          ✕
+        </button>
+      )}
 
       {/* toque no vídeo: toca/pausa (o iframe não recebe cliques, então a interface do YouTube não aparece) */}
       <button
@@ -211,14 +275,14 @@ export default function PlayerYoutube({ videoId, titulo }: { videoId: string; ti
             if (e.key === "ArrowRight") p.seekTo(Math.min(duracao, tempo + 5), true);
             if (e.key === "ArrowLeft") p.seekTo(Math.max(0, tempo - 5), true);
           }}
-          className="group flex h-4 cursor-pointer items-center"
+          className="group flex h-6 cursor-pointer items-center"
         >
           <div className="h-1 w-full overflow-hidden rounded-full bg-white/30 transition-all group-hover:h-1.5">
             <div className="h-full rounded-full bg-accent-light" style={{ width: `${pct}%` }} />
           </div>
         </div>
         <div className="flex items-center gap-2 text-white">
-          <button onClick={alternar} aria-label={tocando ? "Pausar" : "Tocar"} className="rounded p-1 hover:bg-white/15">
+          <button onClick={alternar} aria-label={tocando ? "Pausar" : "Tocar"} className="rounded p-2 hover:bg-white/15">
             {tocando && !fim ? (
               <svg viewBox="0 0 24 24" className={icone} fill="currentColor" aria-hidden>
                 <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
@@ -229,23 +293,40 @@ export default function PlayerYoutube({ videoId, titulo }: { videoId: string; ti
               </svg>
             )}
           </button>
+          {onAnterior && (
+            <button onClick={onAnterior} aria-label="Episódio anterior" className="rounded p-2 hover:bg-white/15">
+              <svg viewBox="0 0 24 24" className={icone} fill="currentColor" aria-hidden>
+                <path d="M6 5h2v14H6zM20 5v14L9 12z" />
+              </svg>
+            </button>
+          )}
+          {onProximo && (
+            <button onClick={onProximo} aria-label="Próximo episódio" className="rounded p-2 hover:bg-white/15">
+              <svg viewBox="0 0 24 24" className={icone} fill="currentColor" aria-hidden>
+                <path d="M16 5h2v14h-2zM4 5v14l11-7z" />
+              </svg>
+            </button>
+          )}
           <span className="text-xs tabular-nums text-white/90">
             {hora(tempo)} / {hora(duracao)}
           </span>
-          <button onClick={alternarSom} aria-label={mudo ? "Ativar som" : "Silenciar"} className="ml-auto rounded p-1 hover:bg-white/15">
+          <button onClick={alternarSom} aria-label={mudo ? "Ativar som" : "Silenciar"} className="ml-auto rounded p-2 hover:bg-white/15">
             <svg viewBox="0 0 24 24" className={icone} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M11 5L6 9H3v6h3l5 4V5z" fill="currentColor" />
               {mudo ? <path d="M16 9l5 6m0-6l-5 6" /> : <path d="M15.5 8.5a5 5 0 010 7M18 6a8.5 8.5 0 010 12" />}
             </svg>
           </button>
-          {typeof document !== "undefined" && document.fullscreenEnabled && (
-            <button onClick={alternarTelaCheia} aria-label={telaCheia ? "Sair da tela cheia" : "Tela cheia"} className="rounded p-1 hover:bg-white/15">
-              <svg viewBox="0 0 24 24" className={icone} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d={telaCheia ? "M9 4v5H4m11-5v5h5M9 20v-5H4m11 5v-5h5" : "M4 9V4h5m6 0h5v5M4 15v5h5m11-5v5h-5"} />
-              </svg>
-            </button>
-          )}
+          <button
+            onClick={telaCheia ? sairTelaCheia : entrarTelaCheia}
+            aria-label={telaCheia ? "Sair da tela cheia" : "Tela cheia"}
+            className="rounded p-2 hover:bg-white/15"
+          >
+            <svg viewBox="0 0 24 24" className={icone} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d={telaCheia ? "M9 4v5H4m11-5v5h5M9 20v-5H4m11 5v-5h5" : "M4 9V4h5m6 0h5v5M4 15v5h5m11-5v5h-5"} />
+            </svg>
+          </button>
         </div>
+      </div>
       </div>
     </div>
   );

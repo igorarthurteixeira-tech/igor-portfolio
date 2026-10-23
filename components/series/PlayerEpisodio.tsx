@@ -48,13 +48,20 @@ export default function PlayerEpisodio({
   serie,
   episodio,
   onFechar,
+  comecarTocando = false,
+  onAnterior,
+  onProximo,
 }: {
   serie: Serie;
   episodio: Episodio;
   onFechar: () => void;
+  comecarTocando?: boolean;
+  /** Recebem se o vídeo estava tocando, para o novo episódio já começar. */
+  onAnterior?: (tocando: boolean) => void;
+  onProximo?: (tocando: boolean) => void;
 }) {
   const id = idEpisodio(serie.slug, episodio.numero);
-  const [tocando, setTocando] = useState(false);
+  const [tocando, setTocando] = useState(comecarTocando && !!episodio.youtubeId);
   const [estado, setEstado] = useState<Estado>({ curtidas: null, comentarios: null, jaCurtiu: false, lista: [] });
   const [verComentarios, setVerComentarios] = useState(false);
   const [nome, setNome] = useState("");
@@ -160,9 +167,14 @@ export default function PlayerEpisodio({
         </button>
 
         {/* vídeo (vertical) */}
-        <div className="relative mx-auto aspect-[9/16] w-[min(72vw,300px)] shrink-0 self-center bg-black md:mx-0 md:h-[min(90vh,900px)] md:w-auto">
+        <div className="relative mx-auto aspect-[9/16] w-[min(80vw,340px)] shrink-0 self-center bg-black md:mx-0 md:h-[min(90vh,900px)] md:w-auto">
           {tocando && episodio.youtubeId ? (
-            <PlayerYoutube videoId={episodio.youtubeId} titulo={episodio.titulo} />
+            <PlayerYoutube
+              videoId={episodio.youtubeId}
+              titulo={episodio.titulo}
+              onAnterior={onAnterior ? () => onAnterior(true) : undefined}
+              onProximo={onProximo ? () => onProximo(true) : undefined}
+            />
           ) : tocando && arquivo ? (
             <video className="absolute inset-0 h-full w-full" src={arquivo} controls autoPlay playsInline />
           ) : (
@@ -197,6 +209,26 @@ export default function PlayerEpisodio({
 
         {/* informações, curtir e comentar */}
         <div className="flex flex-1 flex-col p-5 sm:p-7 md:min-h-0 md:overflow-y-auto">
+          {(onAnterior || onProximo) && (
+            <nav aria-label="Trocar de episódio" className="mb-4 flex gap-2">
+              <button
+                onClick={() => onAnterior?.(false)}
+                disabled={!onAnterior}
+                data-track={`serie:${serie.slug}:${episodio.numero}:anterior`}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-line bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:opacity-35"
+              >
+                <span aria-hidden>‹</span> Anterior
+              </button>
+              <button
+                onClick={() => onProximo?.(false)}
+                disabled={!onProximo}
+                data-track={`serie:${serie.slug}:${episodio.numero}:proximo`}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-accent-strong px-3 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-35"
+              >
+                Próximo <span aria-hidden>›</span>
+              </button>
+            </nav>
+          )}
           <p className="eyebrow mb-1">
             {serie.titulo} · Episódio {episodio.numero}
           </p>

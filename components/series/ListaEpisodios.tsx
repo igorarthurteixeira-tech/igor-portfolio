@@ -9,7 +9,15 @@ import PlayerEpisodio from "./PlayerEpisodio";
 /** Cartões dos episódios, numerados da esquerda para a direita (episódio 1 primeiro). */
 export default function ListaEpisodios({ serie }: { serie: Serie }) {
   const [aberto, setAberto] = useState<number | null>(null);
-  const episodio = serie.episodios.find((e) => e.numero === aberto);
+  // ao trocar de episódio com o player tocando, o próximo já começa
+  const [seguirTocando, setSeguirTocando] = useState(false);
+  const ordem = [...serie.episodios].sort((a, b) => a.numero - b.numero);
+  const episodio = ordem.find((e) => e.numero === aberto);
+  const posicao = episodio ? ordem.indexOf(episodio) : -1;
+  const ir = (i: number, tocando: boolean) => {
+    setSeguirTocando(tocando);
+    setAberto(ordem[i].numero);
+  };
   const producao = process.env.NODE_ENV === "production";
   const agora = useAgora();
 
@@ -24,7 +32,10 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
             return (
               <li key={ep.numero} className="w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.7rem)] lg:w-[210px]">
                 <button
-                  onClick={() => setAberto(ep.numero)}
+                  onClick={() => {
+                    setSeguirTocando(false);
+                    setAberto(ep.numero);
+                  }}
                   data-track={`serie:${serie.slug}:${ep.numero}:abrir`}
                   className="card card-hover group block w-full overflow-hidden text-left"
                   aria-label={disponivel ? `Episódio ${ep.numero}: ${ep.titulo}` : `Episódio ${ep.numero}, em breve`}
@@ -71,7 +82,15 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
       </ul>
 
       {episodio && (
-        <PlayerEpisodio serie={serie} episodio={episodio} onFechar={() => setAberto(null)} />
+        <PlayerEpisodio
+          key={episodio.numero}
+          serie={serie}
+          episodio={episodio}
+          onFechar={() => setAberto(null)}
+          comecarTocando={seguirTocando}
+          onAnterior={posicao > 0 ? (t) => ir(posicao - 1, t) : undefined}
+          onProximo={posicao < ordem.length - 1 ? (t) => ir(posicao + 1, t) : undefined}
+        />
       )}
     </>
   );
