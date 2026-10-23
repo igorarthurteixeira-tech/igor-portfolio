@@ -120,3 +120,12 @@ export function situacao(p: Publicacao): Situacao {
   if (estados.includes("erro") || atrasada) return "atencao";
   return p.agendada_em ? "agendada" : "sem-data";
 }
+
+/** "em 2 h", "em 1 d", "há 15 min": distância até a data, para leitura rápida. */
+export function relativo(iso: string | null) {
+  if (!iso) return null;
+  const min = Math.round((Date.parse(iso) - Date.now()) / 60000);
+  const abs = Math.abs(min);
+  const texto = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.round(abs / 60)} h` : `${Math.round(abs / 1440)} d`;
+  return min >= 0 ? `em ${texto}` : `há ${texto}`;
+}

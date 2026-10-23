@@ -92,6 +92,7 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
         if (video.current) video.current.value = "";
         if (capa.current) capa.current.value = "";
         setMsg({ ok: true, texto: "Publicação salva na fila." });
+        router.push("/admin/publicacoes?aba=fila");
         router.refresh();
       } catch (err) {
         setMsg({ ok: false, texto: err instanceof Error ? err.message : "Erro ao salvar." });
@@ -102,7 +103,7 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
   }
 
   return (
-    <form onSubmit={salvar} className="space-y-5 px-6 pb-6">
+    <form onSubmit={salvar} className="space-y-5 p-6">
 
       <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
         <input

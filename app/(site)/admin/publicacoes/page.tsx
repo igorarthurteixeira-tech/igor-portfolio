@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { situacao, type Conexao, type Publicacao, type RedeId, type Situacao } from "@/lib/publicacoes";
+import { BUCKET, situacao, type Conexao, type Publicacao, type RedeId } from "@/lib/publicacoes";
 import { idEpisodio, series } from "@/lib/series";
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
@@ -11,51 +12,34 @@ export const dynamic = "force-dynamic";
 // "Publicar agora" espera o Instagram processar o vídeo (até cerca de 50 s)
 export const maxDuration = 60;
 
-const GRUPOS: { id: Situacao; titulo: string; ajuda: string }[] = [
-  { id: "atencao", titulo: "Precisam de atenção", ajuda: "Com erro, ou com a hora já passada e algo ainda pendente." },
-  { id: "agendada", titulo: "Agendadas", ajuda: "Saem sozinhas na data marcada (Instagram e YouTube)." },
-  { id: "sem-data", titulo: "Sem data", ajuda: "Só saem quando você clica em Publicar agora." },
-];
+type Aba = "fila" | "nova" | "concluidas";
+const SEM_SERIE = "sem-serie";
 
-function Resumo({ n, rotulo, destaque }: { n: number; rotulo: string; destaque?: boolean }) {
-  return (
-    <div className={`rounded-xl border px-4 py-3 ${destaque && n > 0 ? "border-amber-300 bg-amber-50" : "border-line bg-white"}`}>
-      <p className="text-2xl font-bold tracking-tight text-fg">{n}</p>
-      <p className="text-xs text-muted">{rotulo}</p>
-    </div>
-  );
+/** Agrupa por série (na ordem das séries do site), e dentro de cada uma por episódio ou data. */
+function agruparPorSerie(pubs: Publicacao[]) {
+  const mapa = new Map<string, Publicacao[]>();
+  for (const p of pubs) {
+    const slug = p.episodio?.split(":")[0];
+    const chave = slug && series.some((s) => s.slug === slug) ? slug : SEM_SERIE;
+    mapa.set(chave, [...(mapa.get(chave) ?? []), p]);
+  }
+  const numero = (p: Publicacao) => Number(p.episodio?.split(":")[1] ?? 0);
+  const data = (p: Publicacao) => (p.agendada_em ? Date.parse(p.agendada_em) : Number.MAX_SAFE_INTEGER);
+  const ordem = [...series.map((s) => s.slug), SEM_SERIE];
+  return ordem
+    .filter((chave) => mapa.has(chave))
+    .map((chave) => ({
+      chave,
+      titulo: series.find((s) => s.slug === chave)?.titulo ?? "Sem série",
+      itens: mapa.get(chave)!.sort((a, b) => (chave === SEM_SERIE ? data(a) - data(b) : numero(a) - numero(b))),
+    }));
 }
 
-function Secao({
-  titulo,
-  ajuda,
-  children,
-  rotulo,
-  aberta = true,
-}: {
-  titulo: string;
-  ajuda?: string;
-  children: React.ReactNode;
-  rotulo: string;
-  aberta?: boolean;
-}) {
-  return (
-    <details open={aberta} className="group mb-8">
-      <summary className="mb-4 flex cursor-pointer list-none items-baseline gap-3">
-        <span className="text-xl font-bold text-fg">{titulo}</span>
-        <span className="text-sm text-slate-500">{rotulo}</span>
-        <span aria-hidden className="ml-auto text-slate-400 transition group-open:rotate-180">
-          ▾
-        </span>
-      </summary>
-      {ajuda && <p className="-mt-2 mb-4 text-sm text-muted">{ajuda}</p>}
-      {children}
-    </details>
-  );
-}
-
-export default async function PublicacoesPage() {
+export default async function PublicacoesPage({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
   if (!(await getAdminUser())) redirect("/admin/login");
+
+  const sp = await searchParams;
+  const aba: Aba = sp.aba === "nova" || sp.aba === "concluidas" ? sp.aba : "fila";
 
   const db = supabaseAdmin();
   const { data, error } = db
@@ -82,8 +66,21 @@ export default async function PublicacoesPage() {
   );
 
   const todas = (data ?? []) as Publicacao[];
-  const porGrupo = (g: Situacao) => todas.filter((p) => situacao(p) === g);
-  const concluidas = porGrupo("concluida").reverse();
+  const fila = todas.filter((p) => situacao(p) !== "concluida");
+  const concluidas = todas.filter((p) => situacao(p) === "concluida");
+  const atencao = fila.filter((p) => situacao(p) === "atencao").length;
+  const agendadas = fila.filter((p) => situacao(p) === "agendada").length;
+  const semData = fila.filter((p) => situacao(p) === "sem-data").length;
+
+  // Miniaturas das capas (links temporários de 1 hora; o bucket é privado).
+  const miniaturas: Record<string, string> = {};
+  const capas = (aba === "nova" ? [] : aba === "fila" ? fila : concluidas)
+    .map((p) => p.capa_path)
+    .filter((c): c is string => !!c);
+  if (db && capas.length > 0) {
+    const { data: urls } = await db.storage.from(BUCKET).createSignedUrls(capas, 3600);
+    for (const u of urls ?? []) if (u.path && u.signedUrl) miniaturas[u.path] = u.signedUrl;
+  }
 
   const chip = (nome: string, ok: boolean) => (
     <span
@@ -95,10 +92,40 @@ export default async function PublicacoesPage() {
     </span>
   );
 
+  const abas: { id: Aba; rotulo: string; n?: number; alerta?: boolean }[] = [
+    { id: "nova", rotulo: "Nova publicação" },
+    { id: "fila", rotulo: "Fila", n: fila.length, alerta: atencao > 0 },
+    { id: "concluidas", rotulo: "Concluídas", n: concluidas.length },
+  ];
+
+  const lista = (itens: Publicacao[], vazio: string) => {
+    if (itens.length === 0) return <div className="card p-8 text-center text-slate-500">{vazio}</div>;
+    return agruparPorSerie(itens).map((g) => (
+      <section key={g.chave} className="mb-8">
+        <h2 className="mb-3 flex items-baseline gap-3 text-lg font-bold text-fg">
+          {g.titulo}
+          <span className="text-sm font-normal text-slate-500">
+            {g.itens.length} {g.itens.length === 1 ? "item" : "itens"}
+          </span>
+        </h2>
+        <ul className="space-y-4">
+          {g.itens.map((p) => (
+            <PublicacaoItem
+              key={p.id}
+              p={p}
+              conectadas={conectadas}
+              miniatura={p.capa_path ? miniaturas[p.capa_path] : undefined}
+            />
+          ))}
+        </ul>
+      </section>
+    ));
+  };
+
   return (
-    <section className="bg-page-2 px-6 pb-24 pt-10">
+    <section className="bg-page-2 px-4 pb-24 pt-8 sm:px-6 sm:pt-10">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-8">
+        <div className="mb-6">
           <p className="eyebrow">Painel</p>
           <h1 className="text-3xl font-bold tracking-tight text-fg">Publicações</h1>
           <p className="mt-1 text-sm text-muted">
@@ -108,20 +135,13 @@ export default async function PublicacoesPage() {
 
         {error ? (
           <p className="mb-10 rounded-lg bg-amber-100 px-4 py-3 text-sm text-amber-800">
-            A tabela de publicações ainda não existe. Rode os arquivos em{" "}
-            <code>supabase/migrations/</code> no SQL Editor do Supabase.
+            A tabela de publicações ainda não existe. Rode os arquivos em <code>supabase/migrations/</code> no SQL
+            Editor do Supabase.
           </p>
         ) : (
           <>
-            <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Resumo n={porGrupo("atencao").length} rotulo="Precisam de atenção" destaque />
-              <Resumo n={porGrupo("agendada").length} rotulo="Agendadas" />
-              <Resumo n={porGrupo("sem-data").length} rotulo="Sem data" />
-              <Resumo n={concluidas.length} rotulo="Concluídas" />
-            </div>
-
-            <details open={faltaConectar} className="card group mb-4">
-              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-6 py-4">
+            <details open={faltaConectar} className="card group mb-5">
+              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-5 py-3.5">
                 <span className="font-semibold text-fg">Conexões</span>
                 {chip("Instagram", conectadas.includes("instagram"))}
                 {chip("YouTube", conectadas.includes("youtube"))}
@@ -132,44 +152,56 @@ export default async function PublicacoesPage() {
               <ConexoesRedes conexoes={conexoes} />
             </details>
 
-            <details className="card group mb-10">
-              <summary className="flex cursor-pointer list-none items-center gap-3 px-6 py-4">
-                <span className="font-semibold text-fg">Nova publicação</span>
-                <span aria-hidden className="ml-auto text-slate-400 transition group-open:rotate-180">
-                  ▾
-                </span>
-              </summary>
-              <FormPublicacao episodios={episodios} />
-            </details>
+            <nav aria-label="Publicações" className="mb-6 flex gap-1 overflow-x-auto border-b border-line [scrollbar-width:none]">
+              {abas.map((a) => {
+                const atual = a.id === aba;
+                return (
+                  <Link
+                    key={a.id}
+                    href={`/admin/publicacoes?aba=${a.id}`}
+                    aria-current={atual ? "page" : undefined}
+                    className={`-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+                      atual
+                        ? "border-accent-strong text-accent-strong"
+                        : "border-transparent text-muted hover:text-fg"
+                    }`}
+                  >
+                    {a.rotulo}
+                    {a.n !== undefined && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-bold leading-none ${
+                          a.alerta ? "bg-amber-500 text-white" : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {a.n}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {aba === "nova" && (
+              <div className="card">
+                <FormPublicacao episodios={episodios} />
+              </div>
+            )}
+
+            {aba === "fila" && (
+              <>
+                {fila.length > 0 && (
+                  <p className="mb-5 text-sm text-muted">
+                    {atencao > 0 && <strong className="text-amber-700">{atencao} precisam de atenção · </strong>}
+                    {agendadas} agendadas · {semData} sem data. Agendadas saem sozinhas (Instagram e YouTube); sem
+                    data só saem em <strong>Publicar agora</strong>.
+                  </p>
+                )}
+                {lista(fila, "Nada na fila. Crie uma publicação na aba Nova publicação.")}
+              </>
+            )}
+
+            {aba === "concluidas" && lista([...concluidas].reverse(), "Nenhuma publicação concluída ainda.")}
           </>
-        )}
-
-        {todas.length === 0 && !error && (
-          <div className="card mb-10 p-8 text-center text-slate-500">Nenhuma publicação ainda.</div>
-        )}
-
-        {GRUPOS.map((g) => {
-          const itens = porGrupo(g.id);
-          if (itens.length === 0) return null;
-          return (
-            <Secao key={g.id} titulo={g.titulo} ajuda={g.ajuda} rotulo={`${itens.length}`}>
-              <ul className="space-y-4">
-                {itens.map((p) => (
-                  <PublicacaoItem key={p.id} p={p} conectadas={conectadas} />
-                ))}
-              </ul>
-            </Secao>
-          );
-        })}
-
-        {concluidas.length > 0 && (
-          <Secao titulo="Concluídas" rotulo={`${concluidas.length}`} aberta={false}>
-            <ul className="space-y-4">
-              {concluidas.map((p) => (
-                <PublicacaoItem key={p.id} p={p} conectadas={conectadas} />
-              ))}
-            </ul>
-          </Secao>
         )}
       </div>
     </section>
