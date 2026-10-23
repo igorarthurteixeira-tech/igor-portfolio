@@ -204,7 +204,7 @@ export default function PlayerEpisodio({
             {temVideo ? episodio.titulo : `Episódio ${episodio.numero}`}
           </h2>
           {temVideo && <p className="mt-2 text-sm leading-relaxed text-muted">{episodio.resumo}</p>}
-          <p className="mt-2 text-xs text-slate-500">Duração: {episodio.duracao} · História fictícia, problema real.</p>
+          <p className="mt-2 text-xs text-slate-500">Duração: {episodio.duracao}</p>
 
           {!temVideo && (
             <p className="mt-5 rounded-xl bg-page px-4 py-3 text-sm text-muted">

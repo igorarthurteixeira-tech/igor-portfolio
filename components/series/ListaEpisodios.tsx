@@ -15,14 +15,14 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="flex flex-wrap justify-center gap-4">
         {[...serie.episodios]
           .sort((a, b) => a.numero - b.numero)
           .map((ep) => {
             const disponivel = estaDisponivel(ep, agora, producao);
             const dia = diaDaEstreia(ep);
             return (
-              <li key={ep.numero}>
+              <li key={ep.numero} className="w-[calc(50%-0.5rem)] sm:w-[calc(33.333%-0.7rem)] lg:w-[210px]">
                 <button
                   onClick={() => setAberto(ep.numero)}
                   data-track={`serie:${serie.slug}:${ep.numero}:abrir`}
@@ -60,7 +60,9 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
                     )}
                   </div>
                   <div className="p-4">
-                    <p className="text-sm font-semibold leading-snug text-fg">{disponivel ? ep.titulo : `Episódio ${ep.numero}`}</p>
+                    <p className={`text-sm font-semibold leading-snug ${disponivel ? "text-fg" : "text-slate-500"}`}>
+                      {disponivel ? ep.titulo : `Episódio ${ep.numero}`}
+                    </p>
                   </div>
                 </button>
               </li>

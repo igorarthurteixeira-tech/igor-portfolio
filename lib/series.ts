@@ -25,12 +25,31 @@ export type Episodio = {
   quando?: string;
 };
 
+export type ChatMsg = {
+  autor?: string;
+  cargo?: string;
+  texto: string;
+  /** "in" = mensagem recebida (branca); "out" = enviada (verde). */
+  lado: "in" | "out";
+  /** Anexo (ex.: arquivo), desenhado como etiqueta em vez de balão. */
+  arquivo?: boolean;
+};
+
+/** Conversa que roda animada na capa da página da série. */
+export type ChatSerie = { titulo: string; icone: string; mensagens: ChatMsg[] };
+
 export type Serie = {
   slug: string;
   titulo: string;
   chamada: string;
   descricao: string;
   capa: string;
+  /** Só a ilustração (sem título nem datas), para o fundo do topo da página da série. */
+  arte?: string;
+  /** Chat animado do topo da página (tem prioridade sobre `arte`). */
+  chat?: ChatSerie;
+  /** Texto de agenda (ex.: "Episódios todos os dias às 12h"), editado no painel de Publicações. */
+  agenda?: string;
   /** Série em destaque na home (maior, com selo "Nova série"). */
   destaque?: boolean;
   episodios: Episodio[];
@@ -44,6 +63,18 @@ export const series: Serie[] = [
     descricao:
       "Num escritório comum, uma planilha que ninguém ousa trocar trava, perde dados e atrasa as entregas. Entre a gerente, o dono, o estagiário e o criador da planilha, só o TI parece calmo. Cinco episódios de confusão, ameaças de demissão e uma virada.",
     capa: "/series/expediente-capa.jpg",
+    arte: "/series/expediente-arte.jpg",
+    chat: {
+      titulo: "Equipe",
+      icone: "🏢",
+      mensagens: [
+        { autor: "Sr. Augusto", cargo: "Dono", texto: "Relatório até as 18h. Sem desculpa.", lado: "in" },
+        { autor: "Camila", cargo: "RH", texto: "A planilha TRAVOU. Perdi tudo.", lado: "out" },
+        { autor: "Seu Sérgio", cargo: "Analista sênior", texto: "Funciona na minha máquina.", lado: "in" },
+        { autor: "Patrícia", cargo: "Gerente", texto: "VOCÊ ESTÁ DEMITIDO.", lado: "in" },
+        { texto: "RELATORIO_FINAL.xlsx · 0 KB", lado: "in", arquivo: true },
+      ],
+    },
     destaque: true,
     episodios: [
       {
@@ -95,6 +126,17 @@ export const series: Serie[] = [
     descricao:
       "A Rosa toca uma padaria de bairro com uma equipe cheia de boas intenções e de problemas muito reais. Cada episódio é uma confusão que qualquer dono de negócio reconhece.",
     capa: "/series/padaria-da-rosa-capa.jpg",
+    arte: "/series/padaria-da-rosa-arte.jpg",
+    chat: {
+      titulo: "Padaria da Rosa",
+      icone: "🥖",
+      mensagens: [
+        { texto: "Alguém sabe a senha??", lado: "out" },
+        { texto: "Tá num post-it", lado: "in" },
+        { texto: "Apaguei a aba 😬", lado: "in" },
+        { texto: "BETO.", lado: "out" },
+      ],
+    },
     episodios: [
       {
         numero: 1,

@@ -49,7 +49,7 @@ function CartaoDestaque({ s }: { s: Serie }) {
       <div className="flex flex-col justify-center p-7 md:p-8">
         {ini && fim && (
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-accent-strong">
-            {ini === fim ? `Estreia ${ini}` : `Estreia ${ini} · último episódio em ${fim}`}
+            {s.agenda ?? (ini === fim ? `Estreia ${ini}` : `Estreia ${ini} · último episódio em ${fim}`)}
           </p>
         )}
         <h3 className="mb-3 text-3xl font-bold tracking-tight text-fg">{s.titulo}</h3>
@@ -84,6 +84,9 @@ function CartaoSerie({ s }: { s: Serie }) {
         <Selo n={s.episodios.length} />
       </div>
       <div className="p-6">
+        {s.agenda && (
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-accent-strong">{s.agenda}</p>
+        )}
         <h3 className="mb-2 text-xl font-semibold text-fg">{s.titulo}</h3>
         <p className="text-sm leading-relaxed text-muted">{s.chamada}</p>
         <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-strong">

@@ -7,6 +7,8 @@ import { idEpisodio, series } from "@/lib/series";
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
 import ConexoesRedes from "@/components/admin/ConexoesRedes";
+import AgendaSerie from "@/components/admin/AgendaSerie";
+import { agendasDasSeries } from "@/lib/series-videos";
 import IndicePublicacoes, { type GrupoIndice } from "@/components/admin/IndicePublicacoes";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +68,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
     })),
   );
 
+  const agendas = await agendasDasSeries();
   const todas = (data ?? []) as Publicacao[];
   const fila = todas.filter((p) => situacao(p) !== "concluida");
   const concluidas = todas.filter((p) => situacao(p) === "concluida");
@@ -125,6 +128,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
                   {g.itens.length} {g.itens.length === 1 ? "item" : "itens"}
                 </span>
               </h2>
+              {g.chave !== SEM_SERIE && <AgendaSerie slug={g.chave} inicial={agendas[g.chave] ?? ""} />}
               <ul className="space-y-4">
                 {g.itens.map((p) => (
                   <PublicacaoItem

@@ -29,6 +29,14 @@ async function ligacoesDoPainel(): Promise<Record<string, Ligacao>> {
   return mapa;
 }
 
+/** Texto de agenda de cada série, editado no painel. */
+export async function agendasDasSeries(): Promise<Record<string, string>> {
+  const db = supabaseAdmin();
+  if (!db) return {};
+  const { data } = await db.from("serie_config").select("slug,agenda");
+  return Object.fromEntries((data ?? []).map((r) => [r.slug as string, r.agenda as string]));
+}
+
 /** Vídeo privado ou apagado não pode ser exibido: o oEmbed só responde 200 para vídeo visível. */
 async function estaPublico(videoId: string) {
   try {
@@ -47,7 +55,7 @@ async function estaPublico(videoId: string) {
  * um episódio ligado a uma publicação.
  */
 export async function seriesDoPainel(): Promise<Serie[]> {
-  const mapa = await ligacoesDoPainel();
+  const [mapa, agendas] = await Promise.all([ligacoesDoPainel(), agendasDasSeries()]);
   const resultado: Serie[] = [];
   for (const s of series) {
     let ligada = false;
@@ -63,7 +71,7 @@ export async function seriesDoPainel(): Promise<Serie[]> {
         return { ...base, estreia: l.agendadaEm ?? undefined, quando: l.agendadaEm ?? undefined };
       }),
     );
-    if (ligada) resultado.push({ ...s, episodios });
+    if (ligada) resultado.push({ ...s, episodios, agenda: agendas[s.slug] });
   }
   return resultado;
 }

@@ -6,7 +6,7 @@ import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import * as ig from "@/lib/redes/instagram";
 import { executarRede } from "@/lib/redes/executar";
-import { idsValidos } from "@/lib/series";
+import { idsValidos, series } from "@/lib/series";
 import {
   BUCKET,
   LIMITE_ARQUIVO,
@@ -227,4 +227,23 @@ export async function alterarData(
       ? "Data salva. Como já passou, o agendador publica em até 5 minutos."
       : "Data atualizada.",
   };
+}
+
+/** Texto de agenda da série exibido no site (vazio remove). */
+export async function salvarAgendaSerie(slug: string, texto: string): Promise<Resultado> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  if (!series.some((s) => s.slug === slug)) return { ok: false, erro: "Série inválida." };
+  const limpo = limpar(texto, 80);
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+
+  const { error } = limpo
+    ? await db.from("serie_config").upsert({ slug, agenda: limpo, atualizado_em: new Date().toISOString() })
+    : await db.from("serie_config").delete().eq("slug", slug);
+  if (error) return { ok: false, erro: "Não foi possível salvar. A tabela serie_config existe?" };
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/");
+  revalidatePath(`/vida-de-dono/${slug}`);
+  return { ok: true };
 }
