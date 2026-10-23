@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { diaDaEstreia, estaDisponivel, idEpisodio, type Episodio, type Serie } from "@/lib/series";
 import { useAgora } from "./useAgora";
+import PlayerYoutube from "./PlayerYoutube";
 
 type Comentario = { id: string; nome: string; texto: string; created_at: string };
 type Estado = {
@@ -161,13 +162,7 @@ export default function PlayerEpisodio({
         {/* vídeo (vertical) */}
         <div className="relative mx-auto aspect-[9/16] w-[min(50vw,240px)] shrink-0 self-center bg-black md:w-[340px]">
           {tocando && episodio.youtubeId ? (
-            <iframe
-              className="absolute inset-0 h-full w-full"
-              src={`https://www.youtube-nocookie.com/embed/${episodio.youtubeId}?autoplay=1&rel=0&playsinline=1`}
-              title={episodio.titulo}
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-              allowFullScreen
-            />
+            <PlayerYoutube videoId={episodio.youtubeId} titulo={episodio.titulo} />
           ) : tocando && arquivo ? (
             <video className="absolute inset-0 h-full w-full" src={arquivo} controls autoPlay playsInline />
           ) : (
