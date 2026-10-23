@@ -27,11 +27,15 @@ async function tratar(request: Request) {
     .order("agendada_em", { ascending: true })
     .limit(20);
 
+  // só tenta as redes que estão conectadas; as outras ficam pendentes, sem acusar erro
+  const { data: con } = await db.from("redes_conexoes").select("rede");
+  const conectadas = new Set((con ?? []).map((c) => c.rede as string));
+
   const fila: { id: string; rede: (typeof REDES_AUTOMATICAS)[number] }[] = [];
   for (const p of (data ?? []) as Publicacao[]) {
     for (const rede of REDES_AUTOMATICAS) {
       const estado = p.status_redes[rede];
-      if (p.redes.includes(rede) && (estado === "pendente" || estado === "processando")) {
+      if (conectadas.has(rede) && p.redes.includes(rede) && (estado === "pendente" || estado === "processando")) {
         fila.push({ id: p.id, rede });
       }
     }

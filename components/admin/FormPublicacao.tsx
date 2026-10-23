@@ -4,8 +4,29 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BUCKET, FORMATOS, LIMITE_ARQUIVO, REDES, localParaIso, type RedeId, type Textos } from "@/lib/publicacoes";
 import { criarUploadUrl, salvarPublicacao } from "@/app/(site)/admin/publicacoes/actions";
+import type { ItemCatalogo } from "@/lib/series-videos";
+import SeletorSerie, { SERIE_VAZIA, type EstadoSerie } from "./SeletorSerie";
 
 type Progresso = { rotulo: string; feito: number; total: number };
+
+/** Duração do vídeo escolhido, lida no próprio navegador (ex.: "1:32"). */
+function duracaoDoVideo(arquivo: File): Promise<string> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(arquivo);
+    const el = document.createElement("video");
+    el.preload = "metadata";
+    el.onloadedmetadata = () => {
+      const s = Math.round(el.duration);
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(s) && s > 0 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "");
+    };
+    el.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve("");
+    };
+    el.src = url;
+  });
+}
 
 const mb = (n: number) => (n / 1048576).toFixed(1).replace(".", ",");
 
@@ -44,13 +65,14 @@ async function enviar(
   return pre.path;
 }
 
-export default function FormPublicacao({ episodios }: { episodios: { id: string; rotulo: string }[] }) {
+export default function FormPublicacao({ catalogo }: { catalogo: ItemCatalogo[] }) {
   const router = useRouter();
   const [titulo, setTitulo] = useState("");
   const [redes, setRedes] = useState<RedeId[]>(["instagram", "youtube"]);
   const [textos, setTextos] = useState<Textos>({});
   const [quando, setQuando] = useState("");
-  const [episodio, setEpisodio] = useState("");
+  const [serie, setSerie] = useState<EstadoSerie>(SERIE_VAZIA);
+  const [duracao, setDuracao] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = useTransition();
   const [progresso, setProgresso] = useState<Progresso | null>(null);
@@ -72,6 +94,7 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
         if ((v && v.size > LIMITE_ARQUIVO) || (c && c.size > LIMITE_ARQUIVO)) {
           throw new Error("Arquivo acima de 50 MB. Comprima o vídeo antes de enviar.");
         }
+        const duracaoVideo = v ? await duracaoDoVideo(v) : "";
         const videoPath = v ? await enviar(v, "video", "Enviando o vídeo", setProgresso) : null;
         const capaPath = c ? await enviar(c, "capa", "Enviando a capa", setProgresso) : null;
         setProgresso({ rotulo: "Salvando na fila", feito: 1, total: 1 });
@@ -82,13 +105,25 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
           agendadaEm: localParaIso(quando),
           videoPath,
           capaPath,
-          episodio: episodio || null,
+          serie: serie.escolha
+            ? {
+                escolha: serie.escolha,
+                numero: Number(serie.numero),
+                epTitulo: serie.epTitulo,
+                resumo: serie.resumo,
+                duracao: duracaoVideo,
+                nome: serie.nome,
+                chamada: serie.chamada,
+                descricao: serie.descricao,
+              }
+            : null,
         });
         if (!r.ok) throw new Error(r.erro);
         setTitulo("");
         setTextos({});
         setQuando("");
-        setEpisodio("");
+        setSerie(SERIE_VAZIA);
+        setDuracao(null);
         if (video.current) video.current.value = "";
         if (capa.current) capa.current.value = "";
         setMsg({ ok: true, texto: "Publicação salva na fila." });
@@ -123,20 +158,7 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
         />
       </div>
 
-      <label className="block text-sm text-muted">
-        Episódio da série (opcional)
-        <select value={episodio} onChange={(e) => setEpisodio(e.target.value)} className="field mt-1">
-          <option value="">Nenhum</option>
-          {episodios.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.rotulo}
-            </option>
-          ))}
-        </select>
-        <span className="mt-1 block text-xs text-slate-500">
-          Com o YouTube marcado, o site passa a exibir este vídeo no episódio sozinho, assim que ele estiver público.
-        </span>
-      </label>
+      <SeletorSerie catalogo={catalogo} valor={serie} aoMudar={setSerie} duracao={duracao} />
 
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Redes</p>
@@ -184,7 +206,16 @@ export default function FormPublicacao({ episodios }: { episodios: { id: string;
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm text-muted">
           Vídeo (MP4, até 50 MB)
-          <input ref={video} type="file" accept="video/mp4,video/quicktime" className="field mt-1" />
+          <input
+            ref={video}
+            type="file"
+            accept="video/mp4,video/quicktime"
+            className="field mt-1"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              setDuracao(f ? await duracaoDoVideo(f) : null);
+            }}
+          />
         </label>
         <label className="text-sm text-muted">
           Capa (imagem)

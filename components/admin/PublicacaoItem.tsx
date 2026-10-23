@@ -13,7 +13,6 @@ import {
   type RedeId,
   type StatusRede,
 } from "@/lib/publicacoes";
-import { idEpisodio, series } from "@/lib/series";
 import {
   alterarData,
   apagarVideo,
@@ -43,10 +42,6 @@ const ROTULO: Record<StatusRede, string> = {
   erro: "Erro",
 };
 
-const ROTULOS_EPISODIO = new Map(
-  series.flatMap((s) => s.episodios.map((e) => [idEpisodio(s.slug, e.numero), `${s.titulo} · Ep. ${e.numero}`] as const)),
-);
-
 const botao =
   "rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50";
 const link =
@@ -56,10 +51,13 @@ export default function PublicacaoItem({
   p,
   conectadas,
   miniatura,
+  rotuloSerie,
 }: {
   p: Publicacao;
   conectadas: RedeId[];
   miniatura?: string;
+  /** Ex.: "Expediente · Ep. 1", quando a publicação está ligada a um episódio. */
+  rotuloSerie?: string;
 }) {
   const [pendente, iniciar] = useTransition();
   const [aviso, setAviso] = useState<string | null>(null);
@@ -69,25 +67,42 @@ export default function PublicacaoItem({
   const [novaData, setNovaData] = useState("");
   const atencao = situacao(p) === "atencao";
   const podeEditarData = !concluida(p) && !Object.values(p.status_redes).includes("processando");
-  const esperaInstagram = p.status_redes.instagram === "processando";
+  const esperando = (["instagram", "linkedin"] as const).filter((r) => p.status_redes[r] === "processando");
+  const chaveEspera = esperando.join(",");
+  // redes que o botão "Publicar em tudo" dispara: o YouTube primeiro (rápido), o Instagram por último
+  const PRIORIDADE: Record<RedeId, number> = { youtube: 0, linkedin: 1, instagram: 2, tiktok: 3 };
+  const alvosTudo = REDES.filter(
+    (r) =>
+      r.automatica &&
+      p.redes.includes(r.id) &&
+      conectadas.includes(r.id) &&
+      !!p.video_path &&
+      p.status_redes[r.id] !== "publicado" &&
+      p.status_redes[r.id] !== "processando",
+  ).sort((a, b) => PRIORIDADE[a.id] - PRIORIDADE[b.id]);
   const distancia = relativo(p.agendada_em);
 
-  // Enquanto o Instagram processa o vídeo, confere sozinho a cada 15 s e publica quando terminar.
+  // Enquanto a rede processa o vídeo (Instagram, LinkedIn), confere sozinho a cada 15 s e publica quando terminar.
   useEffect(() => {
-    if (!esperaInstagram) return;
+    if (!chaveEspera) return;
     let tentativas = 0;
+    const redes = chaveEspera.split(",");
     const id = setInterval(async () => {
       if (consultando.current || ++tentativas > 80) return;
       consultando.current = true;
       try {
-        const r = await verificarRede(p.id, "instagram");
-        if (r.ok && r.estado !== "processando") router.refresh();
+        let mudou = false;
+        for (const rede of redes) {
+          const r = await verificarRede(p.id, rede);
+          if (r.ok && r.estado !== "processando") mudou = true;
+        }
+        if (mudou) router.refresh();
       } finally {
         consultando.current = false;
       }
     }, 15000);
     return () => clearInterval(id);
-  }, [esperaInstagram, p.id, router]);
+  }, [chaveEspera, p.id, router]);
 
   async function copiar(texto: string, nome: string) {
     try {
@@ -117,6 +132,21 @@ export default function PublicacaoItem({
     iniciar(async () => {
       const r = await publicarAgora(p.id, rede);
       setAviso(r.ok ? r.mensagem : r.erro);
+    });
+  }
+
+  function publicarTudo() {
+    const nomes = alvosTudo.map((r) => r.nome).join(", ");
+    if (!confirm(`Publicar agora em ${nomes}? As postagens vão ao ar de verdade, nas suas contas.`)) return;
+    setAviso(`Publicando em ${nomes}… pode levar alguns minutos, não feche esta página.`);
+    iniciar(async () => {
+      const resultados: string[] = [];
+      for (const r of alvosTudo) {
+        const x = await publicarAgora(p.id, r.id);
+        resultados.push(`${r.nome}: ${x.ok ? x.mensagem : x.erro}`);
+        setAviso(resultados.join(" · "));
+      }
+      router.refresh();
     });
   }
 
@@ -166,7 +196,7 @@ export default function PublicacaoItem({
               <p className="font-semibold leading-snug text-fg">{p.titulo}</p>
               {p.episodio && (
                 <span className="mt-1 inline-block rounded-full bg-accent-strong/10 px-2.5 py-0.5 text-xs font-semibold text-accent-strong">
-                  Site: {ROTULOS_EPISODIO.get(p.episodio) ?? p.episodio}
+                  Site: {rotuloSerie ?? p.episodio}
                 </span>
               )}
             </div>
@@ -219,6 +249,18 @@ export default function PublicacaoItem({
             </div>
           )}
 
+          {alvosTudo.length >= 2 && (
+            <div className="mt-3 flex justify-end">
+              <button
+                className="rounded-lg bg-accent-strong px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-accent disabled:opacity-50"
+                disabled={pendente}
+                onClick={publicarTudo}
+              >
+                Publicar em tudo
+              </button>
+            </div>
+          )}
+
           <ul className="mt-3 divide-y divide-line rounded-xl border border-line">
             {REDES.filter((r) => p.redes.includes(r.id)).map((r) => {
               const status = p.status_redes[r.id] ?? "pendente";
@@ -263,9 +305,9 @@ export default function PublicacaoItem({
                   {status === "erro" && det?.erro && (
                     <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{det.erro}</p>
                   )}
-                  {r.id === "instagram" && status === "processando" && (
+                  {(r.id === "instagram" || r.id === "linkedin") && status === "processando" && (
                     <p className="mt-2 text-xs text-sky-700">
-                      Aguardando o Instagram processar o vídeo. O painel confere sozinho e publica quando terminar.
+                      Aguardando o {r.nome} processar o vídeo. O painel confere sozinho e publica quando terminar.
                     </p>
                   )}
                   {det?.aviso && (

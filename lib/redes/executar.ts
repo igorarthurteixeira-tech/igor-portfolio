@@ -9,10 +9,11 @@ import {
 } from "@/lib/publicacoes";
 import * as ig from "./instagram";
 import * as yt from "./youtube";
+import * as li from "./linkedin";
 
 type Db = NonNullable<ReturnType<typeof supabaseAdmin>>;
 
-export const REDES_AUTOMATICAS: RedeId[] = ["instagram", "youtube"];
+export const REDES_AUTOMATICAS: RedeId[] = ["instagram", "youtube", "linkedin"];
 export type Resultado = { estado: StatusRede; mensagem: string };
 
 const DIA = 86400000;
@@ -198,8 +199,78 @@ export async function executarYoutube(id: string): Promise<Resultado> {
   }
 }
 
+/**
+ * Publica no LinkedIn: envia o vídeo em partes, espera o processamento (até `esperaMs`) e cria a
+ * publicação. Se o LinkedIn ainda estiver processando, deixa "processando" e a próxima chamada continua
+ * de onde parou, sem reenviar o vídeo.
+ */
+export async function executarLinkedin(id: string, esperaMs: number): Promise<Resultado> {
+  const db = supabaseAdmin();
+  if (!db) return { estado: "erro", mensagem: "Supabase não configurado." };
+
+  const { data } = await db.from("publicacoes").select("*").eq("id", id).single();
+  const pub = data as Publicacao | null;
+  if (!pub) return { estado: "erro", mensagem: "Publicação não encontrada." };
+  if (pub.status_redes.linkedin === "publicado") return { estado: "publicado", mensagem: "Já publicada no LinkedIn." };
+
+  let detalhe: Detalhe = { ...(pub.detalhes_redes.linkedin ?? {}) };
+  try {
+    if (!pub.video_path) throw new Error("Esta publicação não tem vídeo.");
+    const { data: con } = await db.from("redes_conexoes").select("*").eq("rede", "linkedin").maybeSingle();
+    if (!con) throw new Error("O LinkedIn ainda não está conectado. Conecte no topo da página.");
+    const expira = con.expira_em ? Date.parse(con.expira_em as string) : null;
+    if (expira && expira < Date.now()) throw new Error("O acesso ao LinkedIn venceu (dura 60 dias). Reconecte no topo da página.");
+    const token = con.token as string;
+    const contaId = con.conta_id as string;
+
+    if (!detalhe.container_id) {
+      const video = await baixar(db, pub.video_path);
+      const inicio = await li.iniciarVideo(token, contaId, video.dados.byteLength);
+      const partes = await li.enviarPartes(video.dados, inicio.partes);
+      await li.finalizarVideo(token, inicio.video, inicio.uploadToken, partes);
+      detalhe = { container_id: inicio.video };
+      await salvar(db, id, "linkedin", "processando", detalhe);
+    }
+
+    const limite = Date.now() + esperaMs;
+    for (;;) {
+      const st = await li.statusDoVideo(token, detalhe.container_id as string);
+      if (st.status === "AVAILABLE") break;
+      if (st.status === "PROCESSING_FAILED") {
+        throw new Error(`O LinkedIn recusou o vídeo${st.motivo ? `: ${st.motivo}` : "."}`);
+      }
+      if (Date.now() + 6000 > limite) {
+        return {
+          estado: "processando",
+          mensagem: "O LinkedIn ainda está processando o vídeo. Clique de novo em alguns instantes.",
+        };
+      }
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+
+    const post = await li.criarPublicacao(
+      token,
+      contaId,
+      detalhe.container_id as string,
+      pub.textos.linkedin?.legenda ?? "",
+      pub.titulo,
+    );
+    await salvar(db, id, "linkedin", "publicado", {
+      media_id: post.id,
+      permalink: post.link,
+      publicado_em: new Date().toISOString(),
+    });
+    return { estado: "publicado", mensagem: "Publicado no LinkedIn." };
+  } catch (e) {
+    const erro = e instanceof Error ? e.message : "Erro desconhecido.";
+    await salvar(db, id, "linkedin", "erro", { erro });
+    return { estado: "erro", mensagem: erro };
+  }
+}
+
 export async function executarRede(id: string, rede: RedeId, esperaMs: number): Promise<Resultado> {
   if (rede === "instagram") return executarInstagram(id, esperaMs);
   if (rede === "youtube") return executarYoutube(id);
+  if (rede === "linkedin") return executarLinkedin(id, esperaMs);
   return { estado: "erro", mensagem: "Esta rede ainda não tem publicação automática." };
 }

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import ComentarioItem, { type ComentarioSerie } from "@/components/admin/ComentarioItem";
-import { idEpisodio, series } from "@/lib/series";
+import { idEpisodio } from "@/lib/series";
+import { catalogoDeSeries } from "@/lib/series-videos";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,8 @@ export default async function SeriePainelPage({ searchParams }: { searchParams: 
     curtidasPorEp.set(l.episodio, (curtidasPorEp.get(l.episodio) ?? 0) + 1);
   }
   const comentariosSerieLista = (comentariosSerie.data ?? []) as ComentarioSerie[];
-  const linhasSerie = series.flatMap((s) =>
+  const catalogo = await catalogoDeSeries();
+  const linhasSerie = catalogo.flatMap((s) =>
     s.episodios.map((e) => {
       const id = idEpisodio(s.slug, e.numero);
       const dosEp = comentariosSerieLista.filter((c) => c.episodio === id);

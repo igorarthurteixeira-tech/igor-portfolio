@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { acharSerie, series } from "@/lib/series";
+import { series } from "@/lib/series";
 import { serieDoPainel } from "@/lib/series-videos";
 import ListaEpisodios from "@/components/series/ListaEpisodios";
 import CapaAnimada from "@/components/series/CapaAnimada";
@@ -19,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ serie: string }>;
 }): Promise<Metadata> {
   const { serie: slug } = await params;
-  const serie = acharSerie(slug);
+  const serie = await serieDoPainel(slug);
   if (!serie) return {};
   return {
     title: `${serie.titulo} · Vida de Dono`,

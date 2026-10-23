@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { permitir } from "@/lib/rate-limit";
-import { idsValidos } from "@/lib/series";
+import { idsValidosDinamicos } from "@/lib/series-videos";
 
 /** Recebe um comentário. Ele só aparece no site depois de aprovado no painel. */
 export async function POST(request: Request) {
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const nome = String(body.nome ?? "").trim().slice(0, 60);
   const texto = String(body.texto ?? "").trim().slice(0, 500);
 
-  if (!idsValidos().has(episodio) || nome.length < 2 || texto.length < 3) {
+  if (!(await idsValidosDinamicos()).has(episodio) || nome.length < 2 || texto.length < 3) {
     return Response.json(
       { erro: "Informe seu nome e um comentário com pelo menos 3 caracteres." },
       { status: 400 },

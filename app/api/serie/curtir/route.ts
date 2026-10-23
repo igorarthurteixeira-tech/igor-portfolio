@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { permitir } from "@/lib/rate-limit";
-import { idsValidos, MIN_CURTIDAS_EXIBIDAS } from "@/lib/series";
+import { MIN_CURTIDAS_EXIBIDAS } from "@/lib/series";
+import { idsValidosDinamicos } from "@/lib/series-videos";
 
 /** Curte ou descurte (alterna) um episódio. Uma curtida por pessoa (identificada por um ID guardado no navegador). */
 export async function POST(request: Request) {
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const episodio = String(body?.episodio ?? "");
   const sessao = String(body?.sessao ?? "").slice(0, 64);
-  if (!idsValidos().has(episodio) || sessao.length < 8) {
+  if (!(await idsValidosDinamicos()).has(episodio) || sessao.length < 8) {
     return Response.json({ erro: "Requisição inválida." }, { status: 400 });
   }
 

@@ -1,4 +1,6 @@
 export const BUCKET = "publicacoes";
+/** Imagens das séries (capa da série e de cada episódio): bucket público, o site as exibe. */
+export const BUCKET_SERIES = "series";
 export const LIMITE_ARQUIVO = 50 * 1024 * 1024;
 
 export type RedeId = "instagram" | "youtube" | "linkedin" | "tiktok";
@@ -6,7 +8,7 @@ export type RedeId = "instagram" | "youtube" | "linkedin" | "tiktok";
 export const REDES: { id: RedeId; nome: string; titulo: boolean; automatica: boolean }[] = [
   { id: "instagram", nome: "Instagram", titulo: false, automatica: true },
   { id: "youtube", nome: "YouTube", titulo: true, automatica: true },
-  { id: "linkedin", nome: "LinkedIn", titulo: false, automatica: false },
+  { id: "linkedin", nome: "LinkedIn", titulo: false, automatica: true },
   { id: "tiktok", nome: "TikTok", titulo: false, automatica: false },
 ];
 
@@ -28,6 +30,18 @@ export const FORMATOS: Record<RedeId, { video: string; capa: string }> = {
     video: "Vertical 9:16, 1080×1920, MP4, até 60 s",
     capa: "Vertical 9:16, 1080×1920",
   },
+};
+
+/** O que o formulário envia sobre a série do vídeo. `escolha` = slug de uma série existente ou "nova". */
+export type SerieEnviada = {
+  escolha: string;
+  numero: number;
+  epTitulo: string;
+  resumo: string;
+  duracao: string;
+  nome: string;
+  chamada: string;
+  descricao: string;
 };
 
 export type StatusRede = "pendente" | "processando" | "publicado" | "erro";

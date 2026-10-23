@@ -8,8 +8,24 @@ import { conectarInstagram, desconectarRede } from "@/app/(site)/admin/publicaco
 export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
   const router = useRouter();
   const insta = conexoes.find((c) => c.rede === "instagram");
-  const yt = conexoes.find((c) => c.rede === "youtube");
   const params = useSearchParams();
+  const yt = conexoes.find((c) => c.rede === "youtube");
+  const li = conexoes.find((c) => c.rede === "linkedin");
+  const diasLi = diasRestantes(li?.expira_em ?? null);
+  const retornoLi = params.get("linkedin");
+  const avisoLi = retornoLi
+    ? {
+        ok: retornoLi === "ok",
+        texto:
+          {
+            ok: "LinkedIn conectado.",
+            negado: "Você não autorizou o acesso no LinkedIn.",
+            invalido: "A autorização não pôde ser confirmada. Tente de novo.",
+            "sem-configuracao": "As chaves do LinkedIn ainda não estão configuradas no servidor.",
+            erro: "Não foi possível concluir a conexão com o LinkedIn.",
+          }[retornoLi] ?? "Não foi possível concluir a conexão com o LinkedIn.",
+      }
+    : null;
   const retorno = params.get("youtube");
   const aviso = retorno
     ? {
@@ -149,6 +165,58 @@ export default function ConexoesRedes({ conexoes }: { conexoes: Conexao[] }) {
         <p className="mt-2 text-xs text-slate-500">
           Enquanto o projeto do Google não passar pela auditoria, os vídeos enviados ficam privados e você muda a
           visibilidade no YouTube Studio.
+        </p>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-line p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-semibold text-fg">LinkedIn</span>
+          {li ? (
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+              Conectado{li.conta_nome ? ` · ${li.conta_nome}` : ""}
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+              Não conectado
+            </span>
+          )}
+          {li && diasLi !== null && (
+            <span className={`text-xs ${diasLi <= 7 ? "font-semibold text-amber-700" : "text-slate-500"}`}>
+              acesso válido por mais {diasLi} dias
+            </span>
+          )}
+          <div className="ml-auto flex gap-2">
+            <a
+              href="/api/redes/linkedin/conectar"
+              className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+            >
+              {li ? "Reconectar com o LinkedIn" : "Conectar com o LinkedIn"}
+            </a>
+            {li && (
+              <button
+                className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                disabled={pendente}
+                onClick={() => {
+                  if (confirm("Desconectar o LinkedIn? O acesso guardado será apagado.")) {
+                    iniciar(async () => {
+                      await desconectarRede("linkedin");
+                      router.refresh();
+                    });
+                  }
+                }}
+              >
+                Desconectar
+              </button>
+            )}
+          </div>
+        </div>
+        {avisoLi && (
+          <p className={`mt-2 text-sm ${avisoLi.ok ? "text-emerald-700" : "text-red-600"}`} role="status">
+            {avisoLi.texto}
+          </p>
+        )}
+        <p className="mt-2 text-xs text-slate-500">
+          O LinkedIn não renova o acesso sozinho: ele vale 60 dias, e depois é só reconectar (um clique).
         </p>
       </div>
     </div>

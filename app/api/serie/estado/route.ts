@@ -1,10 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { permitir } from "@/lib/rate-limit";
 import {
-  idsValidos,
   MIN_COMENTARIOS_EXIBIDOS,
   MIN_CURTIDAS_EXIBIDAS,
 } from "@/lib/series";
+import { idsValidosDinamicos } from "@/lib/series-videos";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const episodio = url.searchParams.get("episodio") ?? "";
   const sessao = (url.searchParams.get("sessao") ?? "").slice(0, 64);
-  if (!idsValidos().has(episodio)) {
+  if (!(await idsValidosDinamicos()).has(episodio)) {
     return Response.json({ erro: "Episódio inválido." }, { status: 400 });
   }
 

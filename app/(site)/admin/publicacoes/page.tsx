@@ -3,12 +3,11 @@ import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { BUCKET, situacao, type Conexao, type Publicacao, type RedeId } from "@/lib/publicacoes";
-import { idEpisodio, series } from "@/lib/series";
 import FormPublicacao from "@/components/admin/FormPublicacao";
 import PublicacaoItem from "@/components/admin/PublicacaoItem";
 import ConexoesRedes from "@/components/admin/ConexoesRedes";
 import AgendaSerie from "@/components/admin/AgendaSerie";
-import { agendasDasSeries } from "@/lib/series-videos";
+import { agendasDasSeries, catalogoDeSeries, type ItemCatalogo } from "@/lib/series-videos";
 import IndicePublicacoes, { type GrupoIndice } from "@/components/admin/IndicePublicacoes";
 
 export const dynamic = "force-dynamic";
@@ -19,21 +18,21 @@ type Aba = "fila" | "nova" | "concluidas";
 const SEM_SERIE = "sem-serie";
 
 /** Agrupa por série (na ordem das séries do site), e dentro de cada uma por episódio ou data. */
-function agruparPorSerie(pubs: Publicacao[]) {
+function agruparPorSerie(pubs: Publicacao[], catalogo: ItemCatalogo[]) {
   const mapa = new Map<string, Publicacao[]>();
   for (const p of pubs) {
     const slug = p.episodio?.split(":")[0];
-    const chave = slug && series.some((s) => s.slug === slug) ? slug : SEM_SERIE;
+    const chave = slug && catalogo.some((s) => s.slug === slug) ? slug : SEM_SERIE;
     mapa.set(chave, [...(mapa.get(chave) ?? []), p]);
   }
   const numero = (p: Publicacao) => Number(p.episodio?.split(":")[1] ?? 0);
   const data = (p: Publicacao) => (p.agendada_em ? Date.parse(p.agendada_em) : Number.MAX_SAFE_INTEGER);
-  const ordem = [...series.map((s) => s.slug), SEM_SERIE];
+  const ordem = [...catalogo.map((s) => s.slug), SEM_SERIE];
   return ordem
     .filter((chave) => mapa.has(chave))
     .map((chave) => ({
       chave,
-      titulo: series.find((s) => s.slug === chave)?.titulo ?? "Sem série",
+      titulo: catalogo.find((s) => s.slug === chave)?.titulo ?? "Sem série",
       itens: mapa.get(chave)!.sort((a, b) => (chave === SEM_SERIE ? data(a) - data(b) : numero(a) - numero(b))),
     }));
 }
@@ -59,16 +58,9 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
     : { data: null };
   const conexoes = (con ?? []) as Conexao[];
   const conectadas = conexoes.map((c) => c.rede as RedeId);
-  const faltaConectar = !conectadas.includes("instagram") || !conectadas.includes("youtube");
+  const faltaConectar = !conectadas.includes("instagram") || !conectadas.includes("youtube") || !conectadas.includes("linkedin");
 
-  const episodios = series.flatMap((s) =>
-    s.episodios.map((e) => ({
-      id: idEpisodio(s.slug, e.numero),
-      rotulo: `${s.titulo}, Ep. ${e.numero}: ${e.titulo}`,
-    })),
-  );
-
-  const agendas = await agendasDasSeries();
+  const [agendas, catalogo] = await Promise.all([agendasDasSeries(), catalogoDeSeries()]);
   const todas = (data ?? []) as Publicacao[];
   const fila = todas.filter((p) => situacao(p) !== "concluida");
   const concluidas = todas.filter((p) => situacao(p) === "concluida");
@@ -102,15 +94,23 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
     { id: "concluidas", rotulo: "Concluídas", n: concluidas.length },
   ];
 
-  const rotuloItem = (p: Publicacao) => {
+  const epDe = (p: Publicacao) => {
     const [slug, n] = (p.episodio ?? "").split(":");
-    const ep = series.find((s) => s.slug === slug)?.episodios.find((e) => String(e.numero) === n);
+    const serie = catalogo.find((s) => s.slug === slug);
+    return { serie, ep: serie?.episodios.find((e) => String(e.numero) === n), n };
+  };
+  const rotuloItem = (p: Publicacao) => {
+    const { ep } = epDe(p);
     return ep ? `Ep. ${ep.numero} · ${ep.titulo}` : p.titulo;
+  };
+  const rotuloSite = (p: Publicacao) => {
+    const { serie, n } = epDe(p);
+    return p.episodio ? `${serie?.titulo ?? p.episodio.split(":")[0]} · Ep. ${n}` : undefined;
   };
 
   const lista = (itens: Publicacao[], vazio: string) => {
     if (itens.length === 0) return <div className="card p-8 text-center text-slate-500">{vazio}</div>;
-    const grupos = agruparPorSerie(itens);
+    const grupos = agruparPorSerie(itens, catalogo);
     const indice: GrupoIndice[] = grupos.map((g) => ({
       chave: g.chave,
       titulo: g.titulo,
@@ -135,6 +135,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
                     key={p.id}
                     p={p}
                     conectadas={conectadas}
+                    rotuloSerie={rotuloSite(p)}
                     miniatura={p.capa_path ? miniaturas[p.capa_path] : undefined}
                   />
                 ))}
@@ -169,6 +170,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
                 <span className="font-semibold text-fg">Conexões</span>
                 {chip("Instagram", conectadas.includes("instagram"))}
                 {chip("YouTube", conectadas.includes("youtube"))}
+                {chip("LinkedIn", conectadas.includes("linkedin"))}
                 <span aria-hidden className="ml-auto text-slate-400 transition group-open:rotate-180">
                   ▾
                 </span>
@@ -207,7 +209,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
 
             {aba === "nova" && (
               <div className="card mx-auto max-w-3xl">
-                <FormPublicacao episodios={episodios} />
+                <FormPublicacao catalogo={catalogo} />
               </div>
             )}
 
