@@ -57,9 +57,10 @@ export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conec
     return (atual === "publicado" ? "pendente" : "publicado") as StatusRede;
   };
 
-  function publicar(rede: RedeId, nome: string) {
-    if (!confirm(`Publicar agora no ${nome}? A postagem vai ao ar de verdade, na sua conta.`)) return;
-    setAviso(`Enviando ao ${nome}… pode levar até um minuto.`);
+  function publicar(rede: RedeId, nome: string, jaEnviado: boolean) {
+    // Verificar andamento só consulta o Instagram sobre um vídeo já confirmado.
+    if (!jaEnviado && !confirm(`Publicar agora no ${nome}? A postagem vai ao ar de verdade, na sua conta.`)) return;
+    setAviso(jaEnviado ? `Consultando o ${nome}…` : `Enviando ao ${nome}… pode levar até um minuto.`);
     iniciar(async () => {
       const r = await publicarAgora(p.id, rede);
       setAviso(r.ok ? r.mensagem : r.erro);
@@ -91,7 +92,7 @@ export default function PublicacaoItem({ p, conectadas }: { p: Publicacao; conec
                     <button
                       className="rounded-lg bg-accent-strong px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent disabled:opacity-50"
                       disabled={pendente}
-                      onClick={() => publicar(r.id, r.nome)}
+                      onClick={() => publicar(r.id, r.nome, status === "processando")}
                     >
                       {status === "processando"
                         ? "Verificar andamento"

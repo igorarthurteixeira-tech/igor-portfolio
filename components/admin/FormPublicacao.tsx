@@ -1,22 +1,46 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { BUCKET, LIMITE_ARQUIVO, REDES, localParaIso, type RedeId, type Textos } from "@/lib/publicacoes";
 import { criarUploadUrl, salvarPublicacao } from "@/app/(site)/admin/publicacoes/actions";
 
-async function enviar(arquivo: File, tipo: "video" | "capa"): Promise<string> {
+type Progresso = { rotulo: string; feito: number; total: number };
+
+const mb = (n: number) => (n / 1048576).toFixed(1).replace(".", ",");
+
+/** Envio direto ao Storage com XHR, que (ao contrário do fetch) informa o andamento. */
+async function enviar(
+  arquivo: File,
+  tipo: "video" | "capa",
+  rotulo: string,
+  aoProgredir: (p: Progresso) => void,
+): Promise<string> {
   const pre = await criarUploadUrl(arquivo.name, tipo, arquivo.size);
   if (!pre.ok) throw new Error(pre.erro);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !chave) throw new Error("Supabase não configurado.");
-  const sb = createClient(url, chave, { auth: { persistSession: false } });
-  const { error } = await sb.storage
-    .from(BUCKET)
-    .uploadToSignedUrl(pre.path, pre.token, arquivo, { contentType: arquivo.type || undefined });
-  if (error) throw new Error("Falha ao enviar o arquivo.");
+
+  const corpo = new FormData();
+  corpo.append("cacheControl", "3600");
+  corpo.append("", arquivo);
+
+  aoProgredir({ rotulo, feito: 0, total: arquivo.size });
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", `${url}/storage/v1/object/upload/sign/${BUCKET}/${pre.path}?token=${pre.token}`);
+    xhr.setRequestHeader("apikey", chave);
+    xhr.setRequestHeader("authorization", `Bearer ${chave}`);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) aoProgredir({ rotulo, feito: Math.min(e.loaded, arquivo.size), total: arquivo.size });
+    };
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error("Falha ao enviar o arquivo."));
+    xhr.onerror = () => reject(new Error("Falha de conexão ao enviar o arquivo."));
+    xhr.send(corpo);
+  });
   return pre.path;
 }
 
@@ -28,6 +52,7 @@ export default function FormPublicacao() {
   const [quando, setQuando] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [pendente, iniciar] = useTransition();
+  const [progresso, setProgresso] = useState<Progresso | null>(null);
   const video = useRef<HTMLInputElement>(null);
   const capa = useRef<HTMLInputElement>(null);
 
@@ -46,9 +71,9 @@ export default function FormPublicacao() {
         if ((v && v.size > LIMITE_ARQUIVO) || (c && c.size > LIMITE_ARQUIVO)) {
           throw new Error("Arquivo acima de 50 MB. Comprima o vídeo antes de enviar.");
         }
-        setMsg({ ok: true, texto: v ? "Enviando o vídeo… pode levar um minuto." : "Salvando…" });
-        const videoPath = v ? await enviar(v, "video") : null;
-        const capaPath = c ? await enviar(c, "capa") : null;
+        const videoPath = v ? await enviar(v, "video", "Enviando o vídeo", setProgresso) : null;
+        const capaPath = c ? await enviar(c, "capa", "Enviando a capa", setProgresso) : null;
+        setProgresso({ rotulo: "Salvando na fila", feito: 1, total: 1 });
         const r = await salvarPublicacao({
           titulo,
           redes,
@@ -67,6 +92,8 @@ export default function FormPublicacao() {
         router.refresh();
       } catch (err) {
         setMsg({ ok: false, texto: err instanceof Error ? err.message : "Erro ao salvar." });
+      } finally {
+        setProgresso(null);
       }
     });
   }
@@ -151,12 +178,31 @@ export default function FormPublicacao() {
         <button disabled={pendente} className="btn-dark px-6! py-2.5!">
           {pendente ? "Salvando…" : "Adicionar à fila"}
         </button>
-        {msg && (
+        {msg && !progresso && (
           <p className={`text-sm ${msg.ok ? "text-emerald-700" : "text-red-600"}`} role="status">
             {msg.texto}
           </p>
         )}
       </div>
+
+      {progresso && (
+        <div role="status" aria-live="polite">
+          <div className="mb-1 flex justify-between text-sm text-slate-600">
+            <span>{progresso.rotulo}…</span>
+            <span>
+              {progresso.total > 1
+                ? `${Math.round((progresso.feito / progresso.total) * 100)}% · ${mb(progresso.feito)} de ${mb(progresso.total)} MB`
+                : ""}
+            </span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-accent-strong transition-[width] duration-200"
+              style={{ width: `${Math.round((progresso.feito / progresso.total) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
     </form>
   );
 }
