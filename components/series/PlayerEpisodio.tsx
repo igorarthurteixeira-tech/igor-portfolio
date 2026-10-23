@@ -172,7 +172,7 @@ export default function PlayerEpisodio({
                 alt=""
                 fill
                 sizes="340px"
-                className={`object-cover ${temVideo ? "" : "scale-110 blur-xl"}`}
+                className={`object-cover ${temVideo ? "" : "scale-110 blur-lg"}`}
               />
               <div className="absolute inset-0 bg-black/30" />
               {temVideo ? (

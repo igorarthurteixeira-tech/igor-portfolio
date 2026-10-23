@@ -36,7 +36,7 @@ export default function ListaEpisodios({ serie }: { serie: Serie }) {
                       fill
                       sizes="(min-width:1024px) 280px, (min-width:640px) 30vw, 46vw"
                       className={`object-cover transition duration-500 ${
-                        disponivel ? "group-hover:scale-[1.03]" : "scale-110 blur-xl"
+                        disponivel ? "group-hover:scale-[1.03]" : "scale-110 blur-lg"
                       }`}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
