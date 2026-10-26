@@ -58,9 +58,9 @@ async function tokenDoInstagram(db: Db) {
 }
 
 /**
- * Faz uma publicação avançar um passo no Instagram: cria o container, espera o
- * processamento (até `esperaMs`) e publica. Se o Instagram ainda estiver
- * processando, deixa como "processando" para a próxima chamada continuar.
+ * Faz uma publicação avançar um passo no Instagram: cria o container (do vídeo ou do carrossel),
+ * espera o processamento (até `esperaMs`) e publica. Se o Instagram ainda estiver processando,
+ * deixa como "processando" para a próxima chamada continuar de onde parou.
  */
 export async function executarInstagram(id: string, esperaMs: number): Promise<Resultado> {
   const db = supabaseAdmin();
@@ -73,25 +73,62 @@ export async function executarInstagram(id: string, esperaMs: number): Promise<R
     return { estado: "publicado", mensagem: "Já publicada no Instagram." };
   }
 
+  const carrossel = pub.tipo === "carrossel";
+  const imagens = pub.imagens ?? [];
+  const objeto = carrossel ? "o carrossel" : "o vídeo";
   let detalhe: Detalhe = { ...(pub.detalhes_redes.instagram ?? {}) };
   try {
-    if (!pub.video_path) throw new Error("Esta publicação não tem vídeo.");
+    if (carrossel) {
+      if (imagens.length < 2) throw new Error("Um carrossel precisa de pelo menos 2 imagens.");
+    } else if (!pub.video_path) {
+      throw new Error("Esta publicação não tem vídeo.");
+    }
     const { token, contaId } = await tokenDoInstagram(db);
+    const limite = Date.now() + esperaMs;
 
     if (!detalhe.container_id) {
       const legenda = pub.textos.instagram?.legenda ?? "";
-      const video = await urlAssinada(db, pub.video_path);
-      const capa = pub.capa_path ? await urlAssinada(db, pub.capa_path) : undefined;
-      detalhe = { container_id: await ig.criarContainerReel(contaId, token, video, legenda, capa) };
+      if (carrossel) {
+        // 1) uma imagem por vez; o progresso fica salvo e a próxima chamada continua daí
+        const filhos = [...(detalhe.filhos ?? [])];
+        while (filhos.length < imagens.length) {
+          if (Date.now() + 4000 > limite) {
+            await salvar(db, id, "instagram", "processando", { filhos });
+            return { estado: "processando", mensagem: "Enviando as imagens ao Instagram. Clique de novo em alguns instantes." };
+          }
+          filhos.push(await ig.criarItemCarrossel(contaId, token, imagens[filhos.length]));
+        }
+        // 2) espera todas as imagens ficarem prontas
+        for (const filho of filhos) {
+          for (;;) {
+            const st = await ig.statusContainer(filho, token);
+            if (st.codigo === "FINISHED") break;
+            if (st.codigo === "ERROR" || st.codigo === "EXPIRED") {
+              await salvar(db, id, "instagram", "pendente", {});
+              throw new Error(`O Instagram recusou uma das imagens${st.detalhe ? `: ${st.detalhe}` : "."} Confira se são JPEG com até 8 MB.`);
+            }
+            if (Date.now() + 6000 > limite) {
+              await salvar(db, id, "instagram", "processando", { filhos });
+              return { estado: "processando", mensagem: "O Instagram ainda está processando as imagens. Clique de novo em alguns instantes." };
+            }
+            await new Promise((r) => setTimeout(r, 3000));
+          }
+        }
+        // 3) o carrossel, juntando as imagens na ordem
+        detalhe = { filhos, container_id: await ig.criarContainerCarrossel(contaId, token, filhos, legenda) };
+      } else {
+        const video = await urlAssinada(db, pub.video_path as string);
+        const capa = pub.capa_path ? await urlAssinada(db, pub.capa_path) : undefined;
+        detalhe = { container_id: await ig.criarContainerReel(contaId, token, video, legenda, capa) };
+      }
       await salvar(db, id, "instagram", "processando", detalhe);
     }
 
-    const limite = Date.now() + esperaMs;
     for (;;) {
       const st = await ig.statusContainer(detalhe.container_id as string, token);
       if (st.codigo === "FINISHED") break;
       if (st.codigo === "ERROR") {
-        throw new Error(`O Instagram recusou o vídeo${st.detalhe ? `: ${st.detalhe}` : "."}`);
+        throw new Error(`O Instagram recusou ${objeto}${st.detalhe ? `: ${st.detalhe}` : "."}`);
       }
       if (st.codigo === "EXPIRED") {
         await salvar(db, id, "instagram", "pendente", {});
@@ -100,7 +137,7 @@ export async function executarInstagram(id: string, esperaMs: number): Promise<R
       if (Date.now() + 6000 > limite) {
         return {
           estado: "processando",
-          mensagem: "O Instagram ainda está processando o vídeo. Clique de novo em alguns instantes.",
+          mensagem: `O Instagram ainda está processando ${objeto}. Clique de novo em alguns instantes.`,
         };
       }
       await new Promise((r) => setTimeout(r, 5000));
@@ -113,6 +150,12 @@ export async function executarInstagram(id: string, esperaMs: number): Promise<R
       permalink,
       publicado_em: new Date().toISOString(),
     });
+    if (carrossel) {
+      // a página do site passa a mostrar o carrossel assim que ele vai ao ar
+      revalidatePath("/conteudos");
+      if (pub.slug) revalidatePath(`/conteudos/${pub.slug}`);
+      revalidatePath("/");
+    }
     return { estado: "publicado", mensagem: "Publicado no Instagram." };
   } catch (e) {
     const erro = e instanceof Error ? e.message : "Erro desconhecido.";

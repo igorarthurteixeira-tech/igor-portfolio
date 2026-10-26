@@ -114,7 +114,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
     rotulo: rotuloSite(x.p) ?? x.p.titulo,
     estado: x.estado,
     data: x.quando ? quando(x.quando) : "sem data",
-    miniatura: x.p.capa_path ? miniaturas[x.p.capa_path] : undefined,
+    miniatura: x.p.capa_path ? miniaturas[x.p.capa_path] : x.p.imagens?.[0],
     redes: x.p.redes.map((r) => ({ sigla: SIGLAS[r] ?? r, status: x.p.status_redes[r] ?? "pendente" })),
     aba: concluida(x.p) ? "concluidas" : "fila",
   });
@@ -147,7 +147,7 @@ export default async function PublicacoesPage({ searchParams }: { searchParams: 
                     p={p}
                     conectadas={conectadas}
                     rotuloSerie={rotuloSite(p)}
-                    miniatura={p.capa_path ? miniaturas[p.capa_path] : undefined}
+                    miniatura={p.capa_path ? miniaturas[p.capa_path] : p.imagens?.[0]}
                   />
                 ))}
               </ul>

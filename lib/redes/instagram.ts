@@ -1,6 +1,7 @@
 /**
- * Instagram (API com login do Instagram): publica Reels em conta profissional.
- * Fluxo: cria o "container" do Reel, espera o processamento e publica.
+ * Instagram (API com login do Instagram): publica Reels e carrosséis em conta profissional.
+ * Fluxo: cria o "container", espera o processamento e publica. No carrossel, cada imagem
+ * vira um container filho e o container do carrossel junta os filhos.
  */
 
 const VERSAO = process.env.INSTAGRAM_API_VERSION ?? "v23.0";
@@ -68,6 +69,26 @@ export async function criarContainerReel(
       cover_url: capaUrl,
       access_token: token,
     },
+    "POST",
+  );
+  return j.id;
+}
+
+/** Uma imagem do carrossel (JPEG público, até 8 MB). */
+export async function criarItemCarrossel(contaId: string, token: string, imagemUrl: string) {
+  const j = await chamar<{ id: string }>(
+    `/${contaId}/media`,
+    { image_url: imagemUrl, is_carousel_item: true, access_token: token },
+    "POST",
+  );
+  return j.id;
+}
+
+/** O carrossel em si, juntando os containers das imagens (2 a 10), na ordem dos slides. */
+export async function criarContainerCarrossel(contaId: string, token: string, filhos: string[], legenda: string) {
+  const j = await chamar<{ id: string }>(
+    `/${contaId}/media`,
+    { media_type: "CAROUSEL", children: filhos.join(","), caption: legenda, access_token: token },
     "POST",
   );
   return j.id;

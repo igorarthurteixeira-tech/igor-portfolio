@@ -14,12 +14,15 @@ import {
   BUCKET,
   BUCKET_SERIES,
   LIMITE_ARQUIVO,
+  LIMITE_CARROSSEL,
+  LIMITE_IMAGEM,
   idsRedes,
   localParaIso,
   type RedeId,
   type SerieEnviada,
   type StatusRede,
   type Textos,
+  type TipoPublicacao,
 } from "@/lib/publicacoes";
 
 type Resultado<T = object> = ({ ok: true } & T) | { ok: false; erro: string };
@@ -57,18 +60,23 @@ const caminhoPublico = (url: string) => url.split(`/object/public/${BUCKET_SERIE
 /** Cria um endereço de envio direto do navegador para o Storage (evita o limite de tamanho do servidor). */
 export async function criarUploadUrl(
   nome: string,
-  tipo: "video" | "capa",
+  tipo: "video" | "capa" | "imagem",
   tamanho: number,
-): Promise<Resultado<{ path: string; token: string }>> {
+): Promise<Resultado<{ path: string; token: string; bucket: string }>> {
   if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
-  if (tamanho > LIMITE_ARQUIVO) return { ok: false, erro: "Arquivo acima de 50 MB." };
+  if (tipo === "imagem" ? tamanho > LIMITE_IMAGEM : tamanho > LIMITE_ARQUIVO) {
+    return { ok: false, erro: tipo === "imagem" ? "Imagem acima de 8 MB." : "Arquivo acima de 50 MB." };
+  }
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Supabase não configurado." };
-  const ext = (nome.split(".").pop() ?? "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5);
-  const path = `${tipo}/${new Date().getFullYear()}/${randomUUID()}.${ext || "bin"}`;
-  const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path);
+  // as imagens do carrossel vão para o bucket público: o Instagram e o site precisam ler o endereço
+  const bucket = tipo === "imagem" ? BUCKET_SERIES : BUCKET;
+  const ext = tipo === "imagem" ? "jpg" : (nome.split(".").pop() ?? "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5);
+  const pasta = tipo === "imagem" ? "conteudos" : tipo;
+  const path = `${pasta}/${new Date().getFullYear()}/${randomUUID()}.${ext || "bin"}`;
+  const { data, error } = await db.storage.from(bucket).createSignedUploadUrl(path);
   if (error || !data) return { ok: false, erro: "Não foi possível preparar o envio." };
-  return { ok: true, path, token: data.token };
+  return { ok: true, path, token: data.token, bucket };
 }
 
 export async function salvarPublicacao(dados: {
@@ -79,11 +87,16 @@ export async function salvarPublicacao(dados: {
   videoPath: string | null;
   capaPath: string | null;
   serie: SerieEnviada | null;
+  /** "carrossel": várias imagens (caminhos no bucket público), só para o Instagram e o site. */
+  tipo?: TipoPublicacao;
+  imagens?: string[];
+  noSite?: boolean;
 }): Promise<Resultado> {
   if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
   const titulo = limpar(dados.titulo, 120);
   if (titulo.length < 2) return { ok: false, erro: "Dê um título à publicação." };
-  const redes = [...new Set(dados.redes.filter((r) => idsRedes.has(r)))] as RedeId[];
+  const carrossel = dados.tipo === "carrossel";
+  const redes = [...new Set(dados.redes.filter((r) => idsRedes.has(r) && (!carrossel || r === "instagram")))] as RedeId[];
   if (redes.length === 0) return { ok: false, erro: "Escolha ao menos uma rede." };
 
   const textos: Textos = {};
@@ -96,6 +109,8 @@ export async function salvarPublicacao(dados: {
 
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Supabase não configurado." };
+
+  if (carrossel) return salvarCarrossel(db, { titulo, redes, textos, status_redes, dados });
 
   // ---- série (opcional)
   let episodio: string | null = null;
@@ -184,6 +199,50 @@ export async function salvarPublicacao(dados: {
   return { ok: true };
 }
 
+/** Carrossel: valida as imagens (já enviadas ao bucket público), cria o endereço no site e grava. */
+async function salvarCarrossel(
+  db: Db,
+  a: {
+    titulo: string;
+    redes: RedeId[];
+    textos: Textos;
+    status_redes: Record<string, StatusRede>;
+    dados: { agendadaEm: string | null; imagens?: string[]; noSite?: boolean };
+  },
+): Promise<Resultado> {
+  const caminhos = (a.dados.imagens ?? []).map((c) => String(c));
+  if (caminhos.length < 2) return { ok: false, erro: "O carrossel precisa de pelo menos 2 imagens." };
+  if (caminhos.length > LIMITE_CARROSSEL) return { ok: false, erro: `O Instagram aceita no máximo ${LIMITE_CARROSSEL} imagens.` };
+  if (caminhos.some((c) => !/^conteudos\/\d{4}\/[0-9a-f-]{36}\.jpg$/.test(c))) {
+    return { ok: false, erro: "Imagem inválida." };
+  }
+  const slug = slugificar(a.titulo);
+  if (!slug) return { ok: false, erro: "O título precisa ter letras ou números." };
+  const { data: igual } = await db.from("publicacoes").select("id").eq("slug", slug).maybeSingle();
+  if (igual) return { ok: false, erro: "Já existe uma publicação com esse título. Mude o título." };
+
+  const imagens = caminhos.map((c) => db.storage.from(BUCKET_SERIES).getPublicUrl(c).data.publicUrl);
+  const { error } = await db.from("publicacoes").insert({
+    titulo: a.titulo,
+    redes: a.redes,
+    textos: a.textos,
+    status_redes: a.status_redes,
+    agendada_em: a.dados.agendadaEm,
+    tipo: "carrossel",
+    imagens,
+    slug,
+    no_site: !!a.dados.noSite,
+  });
+  if (error) {
+    await db.storage.from(BUCKET_SERIES).remove(caminhos);
+    return { ok: false, erro: "Não foi possível salvar. A migration do carrossel foi aplicada?" };
+  }
+  revalidatePath("/admin", "layout");
+  revalidatePath("/conteudos");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 async function limparPoster(db: Db, url: string) {
   const caminho = caminhoPublico(url);
   if (caminho) await db.storage.from(BUCKET_SERIES).remove([caminho]);
@@ -208,10 +267,16 @@ export async function excluirPublicacao(id: string): Promise<Resultado> {
   if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Supabase não configurado." };
-  const { data } = await db.from("publicacoes").select("video_path,capa_path,episodio,ep").eq("id", id).single();
+  const { data } = await db.from("publicacoes").select("video_path,capa_path,episodio,ep,imagens,slug").eq("id", id).single();
   const arquivos = [data?.video_path, data?.capa_path].filter(Boolean) as string[];
   if (arquivos.length) await db.storage.from(BUCKET).remove(arquivos);
+  const imagensPublicas = ((data?.imagens as string[] | null) ?? []).map(caminhoPublico).filter(Boolean) as string[];
+  if (imagensPublicas.length) await db.storage.from(BUCKET_SERIES).remove(imagensPublicas);
   await db.from("publicacoes").delete().eq("id", id);
+  if (data?.slug) {
+    revalidatePath("/conteudos");
+    revalidatePath(`/conteudos/${data.slug}`);
+  }
 
   const poster = (data?.ep as EpMeta | null)?.poster;
   if (poster) await limparPoster(db, poster);

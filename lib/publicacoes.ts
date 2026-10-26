@@ -2,6 +2,10 @@ export const BUCKET = "publicacoes";
 /** Imagens das séries (capa da série e de cada episódio): bucket público, o site as exibe. */
 export const BUCKET_SERIES = "series";
 export const LIMITE_ARQUIVO = 50 * 1024 * 1024;
+/** Imagem de carrossel: o Instagram aceita até 8 MB por imagem. */
+export const LIMITE_IMAGEM = 8 * 1024 * 1024;
+/** O Instagram aceita de 2 a 10 itens por carrossel. */
+export const LIMITE_CARROSSEL = 10;
 
 export type RedeId = "instagram" | "youtube" | "linkedin" | "tiktok";
 
@@ -12,11 +16,12 @@ export const REDES: { id: RedeId; nome: string; titulo: boolean; automatica: boo
   { id: "tiktok", nome: "TikTok", titulo: false, automatica: false },
 ];
 
-/** Formatos recomendados (orientação para quem prepara o arquivo; o painel não converte nada). */
-export const FORMATOS: Record<RedeId, { video: string; capa: string }> = {
+/** Formatos recomendados (orientação para quem prepara o arquivo; vídeos e capas são usados como estão). */
+export const FORMATOS: Record<RedeId, { video: string; capa: string; carrossel?: string }> = {
   instagram: {
     video: "Vertical 9:16, 1080×1920, MP4 (H.264), até 90 s",
     capa: "Vertical 9:16, 1080×1920. No perfil ela aparece cortada em 4:5, então mantenha o essencial no centro",
+    carrossel: "De 2 a 10 imagens, todas na mesma proporção. Recomendado 4:5 (1080×1350), que ocupa mais espaço no feed. Aceita de 4:5 a 1,91:1",
   },
   youtube: {
     video: "Vertical 9:16, 1080×1920, MP4, até 3 min (vira Short). Horizontal 16:9 vira vídeo comum",
@@ -46,10 +51,14 @@ export type SerieEnviada = {
 
 export type StatusRede = "pendente" | "processando" | "publicado" | "erro";
 
+export type TipoPublicacao = "video" | "carrossel";
+
 export type Textos = Partial<Record<RedeId, { titulo?: string; legenda?: string }>>;
 
 export type Detalhe = {
   container_id?: string;
+  /** Carrossel: containers de cada imagem já enviada ao Instagram. */
+  filhos?: string[];
   media_id?: string;
   permalink?: string | null;
   erro?: string;
@@ -70,6 +79,13 @@ export type Publicacao = {
   agendada_em: string | null;
   video_path: string | null;
   capa_path: string | null;
+  /** "carrossel" = várias imagens (Instagram + página do site). */
+  tipo?: TipoPublicacao;
+  /** Carrossel: endereços públicos das imagens, na ordem dos slides. */
+  imagens?: string[];
+  /** Carrossel: endereço da página no site (/conteudos/<slug>). */
+  slug?: string | null;
+  no_site?: boolean;
   /** Episódio da série que este vídeo representa (ex.: "expediente:1"). */
   episodio: string | null;
   status_redes: Partial<Record<RedeId, StatusRede>>;
@@ -99,6 +115,11 @@ export function localParaIso(valor: string) {
   if (!valor) return null;
   const d = new Date(`${valor}:00-03:00`);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** A publicação tem o que as redes precisam: o vídeo, ou ao menos 2 imagens no carrossel. */
+export function temMidia(p: Publicacao) {
+  return p.tipo === "carrossel" ? (p.imagens?.length ?? 0) >= 2 : !!p.video_path;
 }
 
 export function concluida(p: Publicacao) {

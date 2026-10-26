@@ -17,8 +17,9 @@ import BotaoChat from "@/components/BotaoChat";
 export const revalidate = 300;
 
 import SecaoSeries from "@/components/series/SecaoSeries";
+import SecaoConteudos from "@/components/conteudos/SecaoConteudos";
 
-export default function Home() {
+export default async function Home() {
   const featuredProjects = projects.filter((project) => project.featured);
   const tecnologias = new Set(
     projects.flatMap((p) => p.tech.split("•").map((t) => t.trim())),
@@ -116,6 +117,9 @@ export default function Home() {
 
       {/* VIDA DE DONO: séries de ficção */}
       <SecaoSeries />
+
+      {/* CONTEÚDOS: carrosséis do Instagram (só aparece com algum publicado) */}
+      <SecaoConteudos />
 
       {/* SOBRE: claro */}
       <section id="sobre" className="bg-page px-5 py-20 sm:px-6 md:py-28">
