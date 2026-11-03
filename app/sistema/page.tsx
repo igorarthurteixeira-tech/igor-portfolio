@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Newsreader } from "next/font/google";
 import Baloes from "@/components/sistema/Baloes";
+import Lista from "@/components/sistema/Lista";
+import Visao from "@/components/sistema/Visao";
 import css from "@/components/sistema/sistema.module.css";
 
 const serif = Newsreader({ subsets: ["latin"], variable: "--font-serif" });
@@ -47,7 +49,7 @@ export default function PaginaSistema() {
           </div>
         </div>
       </header>
-      <Baloes />
+      <Visao mapa={<Baloes />} lista={<Lista />} />
     </main>
   );
 }

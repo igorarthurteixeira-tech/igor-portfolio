@@ -110,6 +110,7 @@ export type Externo = {
   liga?: string[]; // outros balões a que também se liga (ids de sistemas, sub-sistemas ou externos)
   ligaFuturo?: string[]; // ligações que ainda vão acontecer: traço tracejado, sem cadeado
   lado?: Lado; // padrão: "internet"; "interno" para um balão de dentro com posição própria
+  cadeado?: boolean; // projeto que já mostra o cadeado no ponto de contato de dentro (os demais projetos não mostram)
   curvas?: Record<string, number>; // traço curvo até o balão indicado (px que a curva se afasta da reta; positivo = para baixo)
 };
 
@@ -126,10 +127,10 @@ export const externos: Externo[] = [
   // projeto idealizado da Segurança: a tranca inteligente (ao lado da Segurança, à direita)
   { id: "proj-tranca", de: "par-seguranca", nome: ["Sistema de", "tranca", "inteligente"], x: 72.67, y: 87.62, r: 50, lado: "interno", projeto: true },
   // dentro da paróquia: os quiosques, que recebem as artes da paróquia (o traço cruza a divisa)
-  { id: "sub-quiosques", de: "ext-artes", nome: ["Quiosques"], x: 67.33, y: 59.23, r: 50, lado: "interno" },
+  { id: "sub-quiosques", de: "ext-artes", nome: ["Quiosques"], x: 67.33, y: 59.23, r: 50, lado: "interno", projeto: true },
   { id: "proj-multimidia", de: "par-comunicacao", nome: ["Página da", "multimídia"], x: 53.67, y: 41.92, r: 46, projeto: true, liga: ["ext-formulario-musica"] },
   // projeto idealizado da loja: página para os fornecedores gerenciarem os próprios produtos, sem tirar o controle interno
-  { id: "proj-fornecedores", de: "loja-fornecedores", nome: ["Portal dos", "fornecedores"], x: 95.33, y: 45, r: 48, projeto: true },
+  { id: "proj-fornecedores", de: "loja-fornecedores", nome: ["Portal dos", "fornecedores"], x: 95.33, y: 45, r: 48, projeto: true, cadeado: true },
   { id: "proj-automacao", de: "ext-artes", nome: ["Automação", "de", "postagens"], x: 70.33, y: 45.38, r: 46, projeto: true, liga: ["site"] },
 ];
 
@@ -163,8 +164,8 @@ export const descricoes: Record<string, string> = {
   "par-comunicacao": "Avisos, montagem da Missa, editor de imagens e telão. Daqui saem os sistemas externos da pastoral da música e das artes da paróquia.",
   "sub-agenda-paroquial": "A agenda da paróquia. O formulário da pastoral da música usa essa agenda para montar a agenda dele.",
   "ext-formulario-musica": "Aplicativo na internet onde os músicos escolhem, de casa, as músicas de cada momento da Missa. Usa a Agenda paroquial para montar a agenda do formulário.",
-  "ext-artes": "Sistema externo ligado à Comunicação, para as artes da paróquia. Alimenta os quiosques.",
-  "sub-quiosques": "Os quiosques da paróquia, dentro da rede. Exibem as artes da paróquia.",
+  "ext-artes": "Sistema externo ligado à Comunicação, para as artes da paróquia. Alimentaria os quiosques, que ainda são um projeto.",
+  "sub-quiosques": "Projeto idealizado: quiosques da paróquia, dentro da rede, que exibiriam as artes da paróquia.",
   "proj-multimidia": "Projeto idealizado: uma página para a equipe de multimídia acessar as informações que os músicos geram no formulário da pastoral da música.",
   "proj-automacao": "Projeto idealizado: facilitar a postagem em várias plataformas. Com um único clique, a postagem é enviada para o próprio Site da paróquia, o Instagram e o que mais puder ser feito.",
   // Segurança
@@ -195,7 +196,7 @@ export const descricoesLigacoes: Record<string, string> = {
   "proj-multimidia>ext-formulario-musica": "Projeto: trazer para a equipe de multimídia as informações que os músicos geram no formulário.",
   "proj-automacao>site": "Projeto: o Site da paróquia é uma das plataformas que receberiam a postagem feita com um único clique.",
   "proj-automacao>ext-artes": "Projeto: a automação de postagens parte das artes da paróquia.",
-  "sub-quiosques>ext-artes": "As artes da paróquia chegam aos quiosques. O traço cruza a divisa: o cadeado marca o ponto de contato, do lado de dentro.",
+  "sub-quiosques>ext-artes": "Projeto: as artes da paróquia chegariam aos quiosques. O traço cruza a divisa: o cadeado marca o ponto de contato, do lado de dentro.",
   "proj-fornecedores>loja-fornecedores": "Projeto: o portal seria a porta do fornecedor para o cadastro de produtos. O traço cruza a divisa, e o controle segue dentro da paróquia.",
   "ide-aluno>ide-professor": "A área do aluno e a área do professor se comunicam: o que o professor lança aparece para o aluno.",
   "ide-aluno>ide-conteudo": "O aluno acessa o conteúdo do curso.",
@@ -216,6 +217,11 @@ export const descricoesCadeados: Record<string, TextoCadeado> = {
     protecao:
       "Não existe caminho direto da internet até o sistema. Quem vai buscar o que o portal deixou na internet é o sistema de dentro: a conexão sempre parte de dentro, e só passa o que o portal precisa trocar.",
   },
+  "loja-fornecedores": {
+    serve: "Seria o único ponto por onde o Portal dos fornecedores (projeto idealizado) se comunicaria com o cadastro de fornecedores da loja.",
+    protecao:
+      "Não haveria caminho direto da internet até a loja: quem busca o que o fornecedor enviou é o sistema de dentro, e tudo passa pela aprovação da loja antes de valer.",
+  },
   "amb-agenda": {
     serve: "É por aqui que a Agenda médica troca informações com o portal.",
     protecao: "A internet não alcança a agenda. A agenda de dentro busca e entrega só o necessário, por este ponto único e controlado.",
@@ -234,7 +240,7 @@ export const descricoesCadeados: Record<string, TextoCadeado> = {
     protecao: "O PDV continua dentro da rede, sem caminho direto da internet. Só este ponto conversa com o site.",
   },
   "sub-quiosques": {
-    serve: "Leva as artes da paróquia até os quiosques.",
+    serve: "Levaria as artes da paróquia até os quiosques (projeto idealizado).",
     protecao: "A internet não alcança os quiosques: as artes chegam por este ponto único e controlado.",
   },
 };

@@ -70,6 +70,35 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
+/* durante o arraste (rolar a página ou o mapa) as animações de fundo e do fluxo param, para não repintar */
+.rolagem[data-rolando] *,
+.rolagem[data-rolando] *::before,
+.rolagem[data-rolando] *::after {
+  animation-play-state: paused !important;
+}
+
+/* visão geral (celular): o fundo fica parado, sem as camadas separadas das estrelas e dos brilhos */
+.rolagem[data-geral] .brilho,
+.rolagem[data-geral] .estrelas {
+  animation: none;
+  will-change: auto;
+}
+
+/* foco num item (celular): o mapa vira uma janela que se arrasta com o dedo, sem barras de rolagem */
+.rolagem[data-foco] {
+  scrollbar-width: none;
+}
+.rolagem[data-foco]::-webkit-scrollbar {
+  display: none;
+}
+
+/* registrada para poder ser animada (a visão geral no celular) */
+@property --topo {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 250px;
+}
+
 /* a faixa do mapa vai de ponta a ponta da tela e rola para os lados quando o mapa é mais largo */
 .rolagem {
   overflow-x: auto;
@@ -195,6 +224,11 @@
 
 .balao:hover {
   scale: 1.07;
+}
+
+/* visão geral e zoom (celular): sem o crescer do "passar o dedo", que fica preso no item tocado e parece um destaque falso */
+.rolagem[data-geral] .balao:hover {
+  scale: 1;
 }
 
 .balao:focus-visible {
@@ -726,5 +760,393 @@
   }
   .miolo {
     gap: 0.9rem;
+  }
+}
+
+/* ───────── Visão em lista (telas estreitas) ───────── */
+/* em telas largas a lista e o botão não existem: só o mapa */
+.lista,
+.alternar,
+.zoomBtn {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .alternar {
+    display: block;
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--noite);
+    background: #ffffff;
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 14px;
+    box-shadow:
+      inset 0 0 0 2px var(--ouro),
+      0 4px 14px rgba(8, 14, 36, 0.35);
+    cursor: pointer;
+  }
+
+  .zoomBtn {
+    display: block;
+    position: fixed;
+    top: 10px;
+    right: 152px;
+    z-index: 30;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--noite);
+    background: #ffffff;
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 14px;
+    box-shadow:
+      inset 0 0 0 2px var(--ouro),
+      0 4px 14px rgba(8, 14, 36, 0.35);
+    cursor: pointer;
+  }
+  .modoLista .zoomBtn {
+    display: none;
+  }
+
+  /* modo lista: o mapa e a legenda saem, o título vira uma faixa azul-noite e a lista aparece embaixo */
+  .cabecalho {
+    padding-top: 4rem;
+  }
+  .modoLista .painelLegenda,
+  .modoLista .dica,
+  .modoLista .rolagem {
+    display: none;
+  }
+  .modoLista .lista {
+    display: block;
+  }
+  /* mapa no celular: título compacto (sem o texto de apoio e com a logo menor), para o mapa inteiro caber acima da legenda sem
+     rolar a página, e os botões do topo não ficarem por cima do título */
+  .pagina:not(:has(.modoLista)) .lead {
+    display: none;
+  }
+  .pagina:not(:has(.modoLista)) .logo40 {
+    width: 64px;
+    height: 64px;
+    padding: 5px;
+  }
+  .pagina:not(:has(.modoLista)) .titulo {
+    font-size: 1.6rem;
+    margin: 0;
+  }
+  .pagina:not(:has(.modoLista)) .cabecalho {
+    padding-top: 3.4rem;
+  }
+  .pagina:has(.modoLista) .cabecalho {
+    position: relative;
+    background: linear-gradient(var(--noite), var(--noite-2));
+    padding-bottom: 0.4rem;
+  }
+  .pagina:has(.modoLista) .titulo {
+    font-size: 1.55rem;
+    margin-bottom: 0.4rem;
+  }
+  .pagina:has(.modoLista) .lead {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .lista {
+    padding: 0 0 15rem;
+  }
+  .listaIntro {
+    margin: 0;
+    padding: 1rem 16px 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  /* as duas zonas, uma sobre a outra, separadas pela divisa dourada */
+  .orgZona {
+    padding: 1.1rem 12px 1.4rem;
+  }
+  .orgNet {
+    background: linear-gradient(var(--noite-2), var(--noite));
+    color: #ffffff;
+    border-bottom: 3px dashed var(--ouro);
+  }
+  .orgDentro {
+    background: var(--perola);
+  }
+  .orgTitulo {
+    margin: 0 0 0.8rem;
+    font-family: var(--font-serif), Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+  .orgNet .orgTitulo {
+    color: var(--ouro);
+  }
+
+  .arvore {
+    margin-bottom: 1.3rem;
+  }
+  .galho {
+    margin: 0 0 0 10px;
+    padding: 8px 0 0 12px;
+    border-left: 2px solid color-mix(in srgb, currentColor 28%, transparent);
+  }
+  .ramo {
+    margin-top: 8px;
+  }
+  .folhas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .no {
+    --cor: #3b4252;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.25;
+    text-align: left;
+    color: var(--ink);
+    background: #ffffff;
+    border: 0;
+    border-radius: 10px;
+    padding: 6px 10px;
+    box-shadow:
+      inset 0 0 0 1.5px var(--cor),
+      0 1px 4px rgba(8, 14, 36, 0.18);
+    cursor: pointer;
+    transition:
+      background 0.25s ease,
+      box-shadow 0.25s ease;
+  }
+  .noRaiz {
+    font-family: var(--font-serif), Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 14px;
+    box-shadow:
+      inset 0 0 0 2.5px var(--cor),
+      0 2px 8px rgba(8, 14, 36, 0.25);
+  }
+  .noProjeto {
+    box-shadow: 0 1px 4px rgba(8, 14, 36, 0.12);
+    outline: 1.5px dashed var(--cor);
+    outline-offset: -1.5px;
+    background: rgba(255, 255, 255, 0.86);
+  }
+  .noAberto {
+    background: #fbf3dc;
+    box-shadow:
+      inset 0 0 0 2.5px var(--ouro),
+      0 2px 8px rgba(8, 14, 36, 0.3);
+  }
+  .noNome {
+    font-weight: 600;
+  }
+  .noLado {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  /* o painel que sobe da base com o texto do item tocado */
+  .folha {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    z-index: 40;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 14px 16px 16px;
+    background: #ffffff;
+    color: var(--ink);
+    border-radius: 16px;
+    box-shadow:
+      inset 0 0 0 2px var(--ouro),
+      0 10px 30px rgba(8, 14, 36, 0.45);
+    animation: aparecer 0.3s ease-out;
+  }
+  /* descritivo do item escolhido (no mapa): o anel é uma borda de verdade e só o texto rola, por dentro dela */
+  .folhaMapa {
+    max-height: 200px;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid var(--ouro);
+    box-shadow: 0 10px 30px rgba(8, 14, 36, 0.45);
+    display: flex;
+    flex-direction: column;
+  }
+  .folhaCorpo {
+    scrollbar-width: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 40px 22px 16px;
+    /* esmaece no pé: sinal de que o texto continua (o último trecho aparece ao rolar) */
+    mask-image: linear-gradient(#000 calc(100% - 26px), transparent);
+  }
+  .folhaCorpo::-webkit-scrollbar {
+    display: none;
+  }
+  .folhaMapa .folhaTexto {
+    font-size: 0.88rem;
+  }
+  .folhaMapa .folhaCadeado {
+    font-size: 0.8rem;
+  }
+  .folhaFechar {
+    z-index: 3; /* acima do texto (que tem máscara e, por isso, cobria o botão e engolia o toque) */
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 26px;
+    line-height: 1;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+  .folhaTitulo {
+    margin: 0 28px 2px 0;
+    font-family: var(--font-serif), Georgia, serif;
+    font-size: 1.15rem;
+  }
+  .folhaTag {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .folhaTexto {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .folhaCadeado {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: #fbf3dc;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .folhaSub {
+    margin: 12px 0 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+}
+
+/* celular: a máscara do fundo (esmaecer no pé) com tantas coisas animando dentro obriga o navegador a repintar a cada quadro e faz piscar
+   no arraste. No lugar dela, uma camada estática da cor do chão por cima do pé do fundo. */
+@media (max-width: 700px) {
+  .fundoVivo {
+    mask-image: none;
+  }
+  .fundoVivo::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 260px;
+    background: linear-gradient(transparent, var(--perola));
+  }
+}
+
+/* durante o zoom o mapa é redesenhado a cada quadro: o que custa caro de pintar sai de cena (esmaecendo) e volta ao fim.
+   Sombras borradas de 45 medalhões e os brilhos gigantes do fundo são o grosso do custo. */
+.fundoVivo,
+.camadaFluxo {
+  transition: opacity 0.3s ease;
+}
+.rolagem[data-zoomando] .fundoVivo,
+.rolagem[data-zoomando] .camadaFluxo {
+  opacity: 0;
+}
+.rolagem[data-zoomando] {
+  text-rendering: optimizeSpeed;
+}
+.rolagem[data-zoomando] .balao {
+  box-shadow:
+    inset 0 0 0 8px #ffffff,
+    inset 0 0 0 10.5px var(--ouro),
+    0 0 0 4px var(--anel);
+}
+.rolagem[data-zoomando] .sub {
+  box-shadow:
+    inset 0 0 0 5px #ffffff,
+    inset 0 0 0 7px var(--ouro),
+    0 0 0 3.5px var(--anel);
+}
+.rolagem[data-zoomando] .externo {
+  box-shadow:
+    inset 0 0 0 4px #ffffff,
+    inset 0 0 0 5.5px var(--ouro),
+    0 0 0 3.5px var(--anel);
+}
+.rolagem[data-zoomando] .projecao {
+  box-shadow: 0 0 0 3.5px var(--anel);
+}
+
+/* com um item escolhido, o descritivo ocupa o lugar da legenda */
+.legendaEscondida {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+/* dica do rodapé na visão geral (dentro da legenda fixa) */
+.legendaDica {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+/* visão geral (celular): sob o mapa fica a cor do chão dele, nunca uma faixa azul (que só aparecia durante o afastamento e sumia no fim) */
+.rolagem[data-geral] {
+  background: var(--perola);
+}
+
+/* celular: o fundo é ancorado no QUADRO (e não nas bordas do mapa, que ganham margens no zoom). Sem isso, ao fim do afastamento, o degradê
+   e os brilhos se redistribuíam pelo mapa maior e o fundo mudava de cor. --topo, --ml, --mr e --mb são as margens em volta do quadro. */
+@media (max-width: 700px) {
+  .superficie {
+    background: linear-gradient(
+      var(--noite) calc(var(--topo) - 250px),
+      var(--noite-2) var(--divisa-y),
+      #eef0f6 var(--divisa-y),
+      var(--perola) calc(var(--topo) + 1420px)
+    );
+  }
+  .brilhoA {
+    left: calc(var(--ml, 0px) - 150px);
+    top: calc(var(--topo) - 500px);
+  }
+  .brilhoB {
+    right: calc(var(--mr, 0px) - 200px);
+    top: calc(var(--topo) - 170px);
+  }
+  .brilhoC {
+    left: calc(var(--ml, 0px) + 420px);
+    top: calc(var(--topo) + 510px);
+  }
+  .fundoVivo::after {
+    bottom: var(--mb, 0px);
   }
 }

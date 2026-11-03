@@ -111,6 +111,7 @@ const tracosExt = exts.flatMap((e) => [
     de: e.id,
     para: alvo,
     projeto: !!e.projeto,
+    cadeado: !!e.cadeado,
     curva: e.curvas?.[alvo],
   })),
   ...(e.ligaFuturo ?? []).map((alvo) => ({
@@ -118,6 +119,7 @@ const tracosExt = exts.flatMap((e) => [
     de: e.id,
     para: alvo,
     projeto: true,
+    cadeado: false,
     curva: e.curvas?.[alvo],
   })),
 ]);
@@ -143,6 +145,7 @@ const tracosSub = subs.flatMap((f) =>
     de: f.id,
     para: alvo,
     projeto: !!f.projeto,
+    cadeado: false,
     curva: undefined as number | undefined,
   })),
 );
@@ -157,11 +160,11 @@ type Contato = {
   de: { x: number; y: number }[];
 };
 const contatos = new Map<string, Contato>();
-// (projeções ainda não existem: não puxam o cadeado)
+// (projeções ainda não existem: não puxam o cadeado, salvo as marcadas com `cadeado`, como o Portal dos fornecedores)
 const todosOsTracos = [
   ...ligacoes.map((l) => ({ de: l.de, para: l.para })),
   ...[...tracosExt, ...tracosSub]
-    .filter((t) => !t.projeto)
+    .filter((t) => !t.projeto || t.cadeado)
     .map((t) => ({ de: t.de, para: t.para })),
 ];
 for (const t of todosOsTracos) {
@@ -310,6 +313,9 @@ const ordem: string[] = ORDEM_SISTEMAS.flatMap((s) => [s, ...todosIds.filter((id
 const posicao = new Map(ordem.map((id, i) => [id, i]));
 const ehSistema = (id: string) => sistemas.some((s) => s.id === id);
 
+// Uma "vista" do mapa: o ponto (qx, qy) do quadro aparece na posição (sx, sy) da tela, com o zoom z.
+type Vista = { z: number; qx: number; qy: number; sx: number; sy: number };
+
 type Dica = {
   titulo: string;
   etiqueta: string;
@@ -348,10 +354,151 @@ export default function Baloes() {
   const quadroRef = useRef<HTMLDivElement>(null);
   const rolagemRef = useRef<HTMLDivElement>(null);
   const infoRef = useRef<HTMLDivElement>(null);
+  const superficieRef = useRef<HTMLDivElement>(null);
 
   // Abertura: os balões aparecem um a um, e a página rola sozinha para mostrar cada um. `aberto` = quantos já apareceram.
   const [aberto, setAberto] = useState(0);
   const pulando = aberto >= ordem.length;
+  const terminouSozinha = useRef(false);
+  const eraPular = useRef(false);
+  // Visão geral (celular): ao fim da abertura o mapa se afasta até caber na largura da tela. O botão amplia de volta.
+  const [geral, setGeral] = useState(false);
+  const mexeuNoZoom = useRef(false);
+  // Destaque (celular, na visão geral): tocar num item o põe no centro, com zoom, e destaca os ligados a ele (`emFoco`).
+  // Segundo toque nele: volta à visão geral, mas o destaque fica. Tocar num vizinho troca o item principal. Tocar fora desfaz tudo.
+  const [destaque, setDestaque] = useState<string | null>(null);
+  const [emFoco, setEmFoco] = useState(false);
+  // espelhos em ref (os temporizadores e a fila leem o estado de agora, não o da renderização em que foram criados)
+  const destaqueRef = useRef<string | null>(null);
+  const emFocoRef = useRef(false);
+  // o layout fixo do zoom (margens + escala da visão geral) e a vista em que o mapa está agora
+  const baseRef = useRef<{ scrollL: number; scrollT: number; m: { ml: number; mr: number; mt: number; mb: number } } | null>(null);
+  const vistaAtual = useRef<Vista | null>(null);
+  const prepararBaseRef = useRef<(() => void) | null>(null);
+  const [liberou, setLiberou] = useState(0); // sobe quando a visão geral termina de se formar: hora de aplicar o toque guardado
+  const pendente = useRef<string | null>(null); // último toque que chegou com o mapa em movimento: roda quando ele parar
+  const mudarDestaque = (v: string | null) => {
+    destaqueRef.current = v;
+    setDestaque(v);
+  };
+  const mudarEmFoco = (v: boolean) => {
+    emFocoRef.current = v;
+    setEmFoco(v);
+  };
+  const paramsGeral = useRef({ escala: 1, topo: 250, altura: 0 });
+  const geralPronto = useRef(false);
+  const ocupado = useRef(false);
+  const destacadoAntesDoToque = useRef<string | null>(null);
+  const alternarGeral = (ligar: boolean) => {
+    mexeuNoZoom.current = true;
+    setGeral(ligar);
+  };
+  useEffect(() => {
+    if (!geral) geralPronto.current = false;
+  }, [geral]);
+  useEffect(() => {
+    if (!pulando || !terminouSozinha.current || !window.matchMedia("(max-width: 700px)").matches) return;
+    const t = setTimeout(() => alternarGeral(true), 1800);
+    return () => clearTimeout(t);
+  }, [pulando]);
+  useEffect(() => {
+    const sup = superficieRef.current;
+    const rol = rolagemRef.current;
+    const quadro = quadroRef.current;
+    if (!mexeuNoZoom.current || !sup || !rol || !quadro || sup.offsetWidth === 0) return;
+    // Ampliar de volta: sem animar o tamanho (pesado no celular). O mapa esmaece, volta ao normal de uma vez e reaparece.
+    if (!geral) {
+      let t2: ReturnType<typeof setTimeout> | undefined;
+      sup.style.transition = "opacity 200ms ease";
+      sup.style.opacity = "0";
+      const t1 = setTimeout(() => {
+        sup.style.transition = "none";
+        rol.style.transition = "none";
+        rol.style.overflow = "";
+        rol.style.height = "";
+        rol.style.paddingBottom = "";
+        sup.style.transform = "";
+        sup.style.zoom = "";
+        sup.style.removeProperty("--topo");
+        sup.style.removeProperty("--ml");
+        sup.style.removeProperty("--mr");
+        sup.style.removeProperty("--mb");
+        sup.style.boxSizing = "";
+        sup.style.paddingLeft = "";
+        sup.style.paddingRight = "";
+        sup.style.paddingBottom = "";
+        rol.style.boxSizing = "";
+        rol.style.touchAction = "";
+        delete rol.dataset.foco;
+        baseRef.current = null;
+        vistaAtual.current = null;
+        rol.style.scrollBehavior = "";
+        rol.scrollLeft = 0;
+        void sup.offsetHeight;
+        sup.style.transition = "opacity 350ms ease";
+        sup.style.opacity = "1";
+        t2 = setTimeout(() => {
+          sup.style.transition = "";
+          sup.style.opacity = "";
+          rol.style.transition = "";
+        }, 400);
+      }, 220);
+      return () => {
+        clearTimeout(t1);
+        if (t2) clearTimeout(t2);
+      };
+    }
+    // Visão geral: só a escala é animada (o compositor cuida, sem recalcular o layout a cada quadro).
+    // O espaço de topo e a altura mudam de uma vez; uma translação inicial faz o mapa parecer ainda no lugar de antes.
+    const DUR = 1800;
+    const natural = sup.offsetHeight;
+    const escala = Math.min(1, window.innerWidth / sup.offsetWidth);
+    const topoNatural = 250;
+    // na visão geral o céu cresce até caber o título inteiro (ele fica por cima do mapa)
+    const cabecalho = rol.closest("main")?.querySelector("header");
+    const topoGeral = Math.max(100, (cabecalho?.getBoundingClientRect().height ?? 0) + 14); // só o que o título ocupa, sem o piso de 250 px do mapa normal
+    const topoNovo = topoGeral / escala;
+    const encolhida = topoGeral + (natural - topoNatural) * escala;
+    // a rolagem suave da abertura pode estar no meio do caminho: cancela e trava o mapa na esquerda
+    rol.style.scrollBehavior = "auto";
+    paramsGeral.current = { escala, topo: topoNovo, altura: encolhida };
+    geralPronto.current = false;
+    rol.scrollLeft = 0;
+    rol.style.overflow = "hidden";
+    rol.style.height = `${natural}px`;
+    rol.style.paddingBottom = "0px";
+    sup.style.transformOrigin = "0 0";
+    sup.style.transition = "none";
+    sup.style.setProperty("--topo", `${topoNovo}px`);
+    sup.style.transform = `translateY(${topoNatural - topoNovo}px)`;
+    void sup.offsetHeight;
+    sup.style.willChange = "transform";
+    sup.style.transition = `transform ${DUR}ms ease`;
+    window.scrollTo({ top: Math.max(0, rol.getBoundingClientRect().top + window.scrollY - 8), behavior: "smooth" });
+    const q = requestAnimationFrame(() => {
+      rol.scrollLeft = 0;
+      sup.style.transform = `scale(${escala})`;
+    });
+    const fim = setTimeout(() => {
+      rol.scrollLeft = 0;
+      rol.style.boxSizing = "content-box"; // a folga de baixo soma à altura (com border-box ela comia o fim do mapa)
+      // terminado o movimento, troca a escala por `zoom`: o mapa passa a ter o tamanho real da tela (390 px, não 1500 encolhidos),
+      // sem a camada gigante que o celular não consegue pintar por inteiro ao rolar (quadrados faltando e piscando)
+      sup.style.transition = "none";
+      sup.style.transform = "";
+      sup.style.zoom = String(escala);
+      sup.style.willChange = "";
+      geralPronto.current = true;
+      prepararBaseRef.current?.();
+      setLiberou((n) => n + 1);
+      rol.style.height = `${encolhida}px`;
+      rol.style.paddingBottom = "150px"; // espaço sob o mapa para a legenda fixa não cobri-lo
+    }, DUR + 60);
+    return () => {
+      cancelAnimationFrame(q);
+      clearTimeout(fim);
+    };
+  }, [geral]);
   useEffect(() => {
     const reduzido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduzido) {
@@ -361,7 +508,12 @@ export default function Baloes() {
   }, []);
   useEffect(() => {
     if (aberto >= ordem.length) return;
-    const t = setTimeout(() => setAberto(aberto + 1), aberto === 0 ? 700 : ehSistema(ordem[aberto - 1]) ? 1000 : 430);
+    // no celular o mapa aparece de perto, um balão por vez: mais devagar, para dar tempo de acompanhar
+    const lento = window.matchMedia("(max-width: 700px)").matches ? 2.3 : 1;
+    const t = setTimeout(() => {
+      if (aberto + 1 >= ordem.length) terminouSozinha.current = true;
+      setAberto(aberto + 1);
+    }, (aberto === 0 ? 900 : ehSistema(ordem[aberto - 1]) ? 1000 : 430) * lento);
     return () => clearTimeout(t);
   }, [aberto]);
   // qualquer gesto da pessoa (rolar, tocar, digitar, clicar) encerra a abertura e mostra tudo
@@ -371,6 +523,22 @@ export default function Baloes() {
     eventos.forEach((e) => window.addEventListener(e, pular, { passive: true, once: true }));
     return () => eventos.forEach((e) => window.removeEventListener(e, pular));
   }, []);
+  // enquanto a pessoa arrasta (rola a página ou o mapa), o fundo e os pontinhos ficam parados: nada se repinta durante o arraste
+  useEffect(() => {
+    let fim: ReturnType<typeof setTimeout> | undefined;
+    const parar = () => {
+      const rol = rolagemRef.current;
+      if (!rol) return;
+      rol.dataset.rolando = "1";
+      clearTimeout(fim);
+      fim = setTimeout(() => delete rol.dataset.rolando, 180);
+    };
+    window.addEventListener("scroll", parar, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener("scroll", parar, { capture: true });
+      clearTimeout(fim);
+    };
+  }, []);
   // a cada balão novo, rola suavemente até ele se estiver fora do meio da tela
   useEffect(() => {
     if (aberto < 1 || aberto > ordem.length) return;
@@ -379,6 +547,7 @@ export default function Baloes() {
     const rolagem = rolagemRef.current;
     if (!n || !quadro || !rolagem) return;
     const r = quadro.getBoundingClientRect();
+    if (r.width === 0) return; // mapa escondido (visão em lista no celular): não rola a página
     const sx = r.left + n.x;
     const sy = r.top + n.y;
     const margemY = Math.min(180, window.innerHeight / 4);
@@ -386,12 +555,253 @@ export default function Baloes() {
     const margemX = Math.min(200, window.innerWidth / 4);
     if (sx < margemX || sx > window.innerWidth - margemX) rolagem.scrollBy({ left: sx - window.innerWidth / 2, behavior: "smooth" });
   }, [aberto]);
+  const cabecalhoEl = () => rolagemRef.current?.closest("main")?.querySelector("header") as HTMLElement | null | undefined;
+  const mostrarCabecalho = (mostrar: boolean) => {
+    const cab = cabecalhoEl();
+    if (!cab) return;
+    cab.style.transition = "opacity 500ms ease";
+    cab.style.opacity = mostrar ? "1" : "0";
+  };
+  // O item no centro da área livre da tela, com zoom para caber também tudo o que se liga a ele.
+  // Zoom em que o item fica com tudo o que se liga a ele cabendo em volta dele.
+  // ───── Zoom ─────
+  // O mapa é sempre descrito por uma "vista": o ponto (qx, qy) do quadro aparece na posição (sx, sy) da tela, com o zoom z.
+  // A visão geral é uma vista (o canto do quadro, sob o céu); o zoom num item é outra (o centro do item, no meio da área livre).
+  // Animar de uma vista a outra é só passar por vistas no meio do caminho: o mesmo movimento para qualquer item.
+  const areaUtil = () => {
+    // embaixo fica a legenda (ou, com um item escolhido, o descritivo dele): reserva de altura fixa, a mesma sempre
+    const reserva = 210;
+    const topoUtil = 56;
+    return { topoUtil, alturaUtil: Math.max(200, window.innerHeight - topoUtil - reserva - 24) };
+  };
+  const vistaGeral = (): Vista => {
+    const { escala, topo } = paramsGeral.current;
+    return { z: escala, qx: 0, qy: 0, sx: 0, sy: topo * escala };
+  };
+  const vistaDoItem = (id: string): Vista => {
+    const c = nos.get(id)!;
+    let meioW = c.r;
+    let meioH = c.r;
+    for (const v of vizinhos.get(id) ?? []) {
+      const n = nos.get(v);
+      if (!n) continue;
+      meioW = Math.max(meioW, Math.abs(n.x - c.x) + n.r);
+      meioH = Math.max(meioH, Math.abs(n.y - c.y) + n.r);
+    }
+    const PAD = 36;
+    const { topoUtil, alturaUtil } = areaUtil();
+    const z = Math.min(1, Math.max(paramsGeral.current.escala, Math.min(window.innerWidth / 2 / (meioW + PAD), alturaUtil / 2 / (meioH + PAD))));
+    return { z, qx: c.x, qy: c.y, sx: window.innerWidth / 2, sy: topoUtil + alturaUtil / 2 };
+  };
+  const vistaDaTela = (): Vista => vistaAtual.current ?? vistaGeral();
+  // Margens (em unidades do quadro) que o mapa precisa ter em volta para que NENHUMA vista (a geral e a de cada item) mostre
+  // área sem mapa. Com elas fixas, o zoom vira só uma transformação: nada é recalculado nem repintado durante o movimento.
+  const margensBase = () => {
+    const todas: Vista[] = [vistaGeral(), ...todosIds.map((id) => vistaDoItem(id))];
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    let ml = 0;
+    let mr = 0;
+    let mt = 0;
+    let mb = 0;
+    for (const v of todas) {
+      ml = Math.max(ml, v.sx / v.z - v.qx);
+      mr = Math.max(mr, (W - v.sx) / v.z - (QUADRO_W - v.qx));
+      mt = Math.max(mt, v.sy / v.z - v.qy);
+      mb = Math.max(mb, (H - v.sy) / v.z - (QUADRO_H - v.qy));
+    }
+    const FOLGA = 120; // o caminho entre duas vistas pode passar um pouco além das duas pontas
+    // embaixo, mais: a página pode estar rolada para baixo (até uns 150 px na tela) e a janela então mostra mais do fim do mapa
+    return { ml: ml + FOLGA, mr: mr + FOLGA, mt: mt + FOLGA, mb: mb + FOLGA + 600 };
+  };
+  // Layout-base do zoom: o mapa inteiro, na escala da visão geral, com as margens que qualquer vista precisa. Fica assim do fim da
+  // formação da visão geral até o "Ampliar": o zoom é só uma transformação, e nunca há troca de layout (a troca era o que piscava).
+  const prepararBase = () => {
+    const sup = superficieRef.current;
+    const rol = rolagemRef.current;
+    if (!sup || !rol) return;
+    const { escala: s, topo, altura } = paramsGeral.current;
+    const m = margensBase();
+    const scrollL = m.ml * s;
+    const scrollT = m.mt * s - topo * s;
+    rol.style.boxSizing = "content-box";
+    rol.style.overflow = "hidden";
+    rol.style.height = `${altura}px`;
+    rol.style.padding = "";
+    rol.style.paddingBottom = "150px";
+    rol.dataset.foco = "1";
+    sup.style.boxSizing = "content-box";
+    sup.style.paddingLeft = `${m.ml}px`;
+    sup.style.paddingRight = `${m.mr}px`;
+    sup.style.paddingBottom = `${m.mb}px`;
+    sup.style.zoom = String(s);
+    sup.style.setProperty("--topo", `${m.mt}px`);
+    // as margens também vão para o CSS: o fundo (degradê e brilhos) é ancorado no quadro, não nas bordas do mapa com margens
+    sup.style.setProperty("--ml", `${m.ml}px`);
+    sup.style.setProperty("--mr", `${m.mr}px`);
+    sup.style.setProperty("--mb", `${m.mb}px`);
+    sup.style.transformOrigin = "0 0";
+    sup.style.transform = "";
+    rol.scrollLeft = scrollL;
+    rol.scrollTop = scrollT;
+    baseRef.current = { scrollL, scrollT, m };
+    vistaAtual.current = vistaGeral();
+  };
+  useEffect(() => {
+    prepararBaseRef.current = prepararBase;
+  });
+  // Na visão geral com um item destacado, o cartão descritivo (fixo embaixo) cobriria o fim do mapa: a página ganha folga embaixo e
+  // rola até o fim, deixando o mapa inteiro à vista acima do cartão. Sem destaque, volta à folga normal.
+  // Rola a página só o necessário para o fim do mapa ficar acima do que cobre o rodapé (a legenda ou o cartão); se já cabe, não rola
+  const rolarParaVerTudo = () => {
+    const quadro = quadroRef.current;
+    if (!quadro) return;
+    const fim = quadro.getBoundingClientRect(); // posições na janela (o mapa está na visão geral, sem transformação)
+    if (fim.width === 0) return;
+    const cobertor = (document.querySelector("aside[class*=folha]") ?? document.querySelector(`.${css.painelLegenda}`)) as HTMLElement | null;
+    const topoDoCobertor = cobertor ? cobertor.getBoundingClientRect().top : window.innerHeight;
+    const falta = fim.bottom + 14 - topoDoCobertor; // quanto do mapa está por baixo do cobertor
+    const maximo = document.documentElement.scrollHeight - window.innerHeight;
+    const alvo = Math.max(0, Math.min(maximo, window.scrollY + falta));
+    if (Math.abs(alvo - window.scrollY) > 1) window.scrollTo({ top: alvo, behavior: "smooth" });
+  };
+  const ajustarFolgaDoCartao = (rolar: boolean) => {
+    const rol = rolagemRef.current;
+    if (!rol) return;
+    const comCartao = destaqueRef.current !== null;
+    rol.style.paddingBottom = comCartao ? "240px" : "150px";
+    // a visão geral só cabe inteira acima da legenda (ou do cartão) com a página rolada até o fim: rola sozinha
+    if (rolar) rolarParaVerTudo();
+  };
+  // Leva o mapa da vista de agora até `destino` ("geral" ou o id de um item). O mapa é pintado uma vez, na escala da visão geral;
+  // o zoom é uma transformação feita pela placa de vídeo, e o navegador repinta nítido o que fica à vista, sem trocar nada.
+  const irPara = (destino: "geral" | string) => {
+    const sup = superficieRef.current;
+    const rol = rolagemRef.current;
+    if (!sup || !rol) return;
+    if (!baseRef.current) prepararBase();
+    const base = baseRef.current!;
+    const de = { ...vistaDaTela() };
+    // as vistas são medidas em relação ao topo do mapa (que rola junto com a página): o zoom num item mira a posição na TELA,
+    // então soma quanto a página está rolada agora. A rolagem não é mexida: nada "teleporta" antes do movimento.
+    const sc = window.scrollY;
+    const alvo = destino === "geral" ? vistaGeral() : vistaDoItem(destino);
+    const para: Vista = destino === "geral" ? alvo : { ...alvo, sy: alvo.sy + sc };
+    const { escala: s } = paramsGeral.current;
+    const m = base.m; // as margens com que o layout foi montado (não recalcular: a janela do celular pode ter mudado de altura)
+    // a transformação que faz a vista `v` aparecer, a partir do mapa na escala da visão geral
+    const transformDe = (v: Vista) => {
+      const k = v.z / s;
+      const px = (m.ml + v.qx) * s;
+      const py = (m.mt + v.qy) * s;
+      const tx = v.sx + base.scrollL - k * px;
+      const ty = v.sy + base.scrollT - k * py;
+      return `translate(${tx / s}px, ${ty / s}px) scale(${k})`;
+    };
+    ocupado.current = true;
+    rol.dataset.rolando = "1";
+    rol.style.touchAction = destino === "geral" ? "" : "none"; // com o zoom feito, arrastar não rola a página
+    sup.style.transition = "none";
+    sup.style.transform = transformDe(de);
+    void sup.offsetHeight;
+    sup.style.willChange = "transform";
+    // quadros-chave sobre a curva (zoom crescendo em proporção, com início e fim suaves)
+    const N = 14;
+    const quadros: Keyframe[] = [];
+    for (let n = 0; n <= N; n++) {
+      const u = n / N;
+      const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+      quadros.push({
+        offset: u,
+        transform: transformDe({
+          z: de.z * Math.pow(para.z / de.z, e),
+          qx: de.qx + (para.qx - de.qx) * e,
+          qy: de.qy + (para.qy - de.qy) * e,
+          sx: de.sx + (para.sx - de.sx) * e,
+          sy: de.sy + (para.sy - de.sy) * e,
+        }),
+      });
+    }
+    const anim = sup.animate(quadros, { duration: 650, easing: "linear", fill: "forwards" });
+    anim.onfinish = () => {
+      // o fim fica como a última posição do movimento: a transformação passa de animada a fixa, sem trocar o layout
+      sup.style.transform = destino === "geral" ? "" : transformDe(para);
+      anim.cancel();
+      sup.style.willChange = "";
+      vistaAtual.current = para;
+      delete rol.dataset.rolando;
+      if (destino === "geral") ajustarFolgaDoCartao(true);
+      ocupado.current = false;
+      processarPendente();
+    };
+  };
+  const tocarNo = (id: string) => {
+    if (!geral) {
+      // mapa normal no toque: o segundo toque no mesmo item tira o destaque
+      if (destacadoAntesDoToque.current === id) {
+        esconder();
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      }
+      return;
+    }
+    if (ocupado.current || !geralPronto.current) {
+      pendente.current = id; // o mapa ainda está se movendo: guarda o toque e aplica quando parar
+      return;
+    }
+    if (emFocoRef.current && id === destaqueRef.current) {
+      // segundo toque no mesmo item: visão geral, com o destaque mantido
+      mudarEmFoco(false);
+      mostrarCabecalho(true);
+      irPara("geral");
+      return;
+    }
+    // primeiro toque, vizinho ou outro item: ele vira o ponto principal, no centro, com zoom
+    mudarDestaque(id);
+    mudarEmFoco(true);
+    mostrarCabecalho(false);
+    irPara(id);
+  };
+  // toque fora de qualquer item (ou "Voltar"): volta ao padrão, sem destaque
+  const limparDestaque = () => {
+    if (ocupado.current) {
+      pendente.current = "#limpar";
+      return;
+    }
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    mudarDestaque(null);
+    esconder();
+    if (emFocoRef.current) {
+      mudarEmFoco(false);
+      mostrarCabecalho(true);
+      irPara("geral");
+    } else ajustarFolgaDoCartao(false);
+  };
+  const processarPendente = () => {
+    const p = pendente.current;
+    pendente.current = null;
+    if (!p) return;
+    if (p === "#limpar") limparDestaque();
+    else tocarNo(p);
+  };
+  useEffect(() => {
+    if (!liberou) return;
+    // a visão geral acabou de se formar: rola até o fim para o grupo Segurança (embaixo) não ficar sob a legenda
+    if (!pendente.current) rolarParaVerTudo();
+    processarPendente();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liberou]);
+  // antes do toque (o navegador ainda não "passou o mouse"): guarda quem estava destacado, para o segundo toque desfazer
+  const aoPressionar = () => {
+    destacadoAntesDoToque.current = noAtivo;
+  };
+
   const cadeadoVisivel = (id: string) => visivel(id) && fluxos.filter((l) => l.de === id || l.para === id).every((l) => visivel(l.de) && visivel(l.para));
   const visivel = (id: string) => (posicao.get(id) ?? 0) < aberto;
   const oculto = (id: string) => (visivel(id) ? "" : css.oculto);
 
   // ao passar o mouse (ou focar com o teclado) num círculo: o balão aparece em cima dele (ou embaixo, se estiver perto do topo)
   const mostrarNo = (id: string) => {
+    if (geral) return; // visão geral: o toque dá zoom no item (não há balão de explicação)
     const n = nos.get(id)!;
     const abaixo = n.y - n.r < 280;
     setNoAtivo(id);
@@ -404,6 +814,7 @@ export default function Baloes() {
   };
   // ao passar o mouse (ou focar) num cadeado
   const mostrarCadeado = (c: { id: string; x: number; y: number }) => {
+    if (geral) return;
     const abaixo = c.y < 330;
     setNoAtivo(c.id);
     setDica({
@@ -415,6 +826,7 @@ export default function Baloes() {
   };
   // ao passar o mouse numa ligação: o balão segue o mouse
   const mostrarLigacao = (l: Lig, ev: MouseEvent) => {
+    if (geral) return;
     const r = quadroRef.current?.getBoundingClientRect();
     if (!r) return;
     const x = ev.clientX - r.left;
@@ -442,7 +854,9 @@ export default function Baloes() {
 
   // Quem fica em destaque: o balão sob o mouse e seus vizinhos; os dois lados da ligação sob o mouse; ou o sistema escolhido na legenda.
   const ligAtivaObj = todasLigacoes.find((l) => l.id === ligacaoAtiva);
-  const ativos: Set<string> | null = noAtivo
+  const ativos: Set<string> | null = destaque
+    ? new Set([destaque, ...(vizinhos.get(destaque) ?? [])])
+    : noAtivo
     ? new Set([noAtivo, ...(vizinhos.get(noAtivo) ?? [])])
     : ligAtivaObj
       ? new Set([ligAtivaObj.de, ligAtivaObj.para])
@@ -476,7 +890,7 @@ export default function Baloes() {
 
   return (
     <>
-      <div className={css.painelLegenda} data-abertura={pulando ? "fim" : "andando"}>
+      <div className={`${css.painelLegenda} ${destaque ? css.legendaEscondida : ""}`} data-abertura={pulando ? "fim" : "andando"}>
         <p className={css.legendaProjecao}>
           <span className={css.amostraProjecao} aria-hidden="true" />
           Tracejado: projeto idealizado, ainda não existe
@@ -504,9 +918,64 @@ export default function Baloes() {
             </li>
           ))}
         </ul>
+        {/* visão geral (celular): o rodapé continua, com a dica que vale para ela (a de "arrastar" só vale no mapa grande) */}
+        {geral && <p className={css.legendaDica}>Toque num item para ver o que ele faz e com o que se liga.</p>}
       </div>
-      <div className={css.rolagem} ref={rolagemRef}>
-        <div className={css.superficie}>
+      {/* celular: o descritivo do item escolhido, fixo embaixo (troca a cada item novo) */}
+      {destaque && (
+        <aside key={destaque} className={`${css.folha} ${css.folhaMapa}`} role="status" aria-live="polite">
+          <button type="button" className={css.folhaFechar} onClick={limparDestaque} aria-label="Limpar destaque">
+            ×
+          </button>
+          <div className={css.folhaCorpo}>
+            <h3 className={css.folhaTitulo}>{infoDoNo(destaque).titulo}</h3>
+            <p className={css.folhaTag}>{infoDoNo(destaque).etiqueta}</p>
+            <p className={css.folhaTexto}>{infoDoNo(destaque).texto}</p>
+            {descricoesCadeados[destaque] && (
+              <p className={css.folhaCadeado}>
+                <strong>🔒 Ponto de contato.</strong> {descricoesCadeados[destaque].serve} {descricoesCadeados[destaque].protecao}
+              </p>
+            )}
+          </div>
+        </aside>
+      )}
+      {/* celular: durante a abertura o botão pula tudo e vai direto à visão geral; depois alterna a visão geral */}
+      <button
+        type="button"
+        className={css.zoomBtn}
+        // o toque também encerra a abertura (ouvinte da janela) antes do clique: guarda se o botão estava como "Pular animação"
+        onPointerDown={() => (eraPular.current = !pulando)}
+        onKeyDown={() => (eraPular.current = !pulando)}
+        onClick={() => {
+          if (destaque) {
+            limparDestaque();
+            return;
+          }
+          if (eraPular.current || !pulando) {
+            // pula tudo e já vai para a visão geral (o botão passa a dizer "Ampliar")
+            setAberto(ordem.length);
+            alternarGeral(true);
+          } else alternarGeral(!geral);
+          eraPular.current = false;
+        }}
+      >
+        {destaque ? (emFoco ? "Voltar" : "Limpar destaque") : !pulando ? "Pular animação" : geral ? "Ampliar" : "Visão geral"}
+      </button>
+      <div
+        className={css.rolagem}
+        ref={rolagemRef}
+        data-geral={geral ? "1" : undefined}
+        onScroll={(e) => {
+          // a janela do mapa fica sempre na posição do layout-base (o zoom é só uma transformação); rolagem que sobrar é desfeita
+          if (!geral || ocupado.current) return;
+          const alvo = baseRef.current?.scrollL ?? 0;
+          if (e.currentTarget.scrollLeft !== alvo) e.currentTarget.scrollLeft = alvo;
+        }}
+        onClick={() => {
+          if (geral && destaque) limparDestaque();
+        }}
+      >
+        <div className={css.superficie} ref={superficieRef}>
           <div className={css.fundoVivo} aria-hidden="true">
             <i className={`${css.brilho} ${css.brilhoA}`} />
             <i className={`${css.brilho} ${css.brilhoB}`} />
@@ -651,6 +1120,11 @@ export default function Baloes() {
                   key={s.id}
                   className={`${css.balao} ${apagado(s.id)}`}
                   tabIndex={0}
+                  onPointerDown={aoPressionar}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    tocarNo(s.id);
+                  }}
                   onMouseEnter={() => mostrarNo(s.id)}
                   onMouseLeave={esconder}
                   onFocus={() => mostrarNo(s.id)}
@@ -686,6 +1160,11 @@ export default function Baloes() {
                   key={f.id}
                   className={`${css.balao} ${css.sub} ${f.projeto ? css.projecao : ""} ${apagado(f.id)}`}
                   tabIndex={0}
+                  onPointerDown={aoPressionar}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    tocarNo(f.id);
+                  }}
                   onMouseEnter={() => mostrarNo(f.id)}
                   onMouseLeave={esconder}
                   onFocus={() => mostrarNo(f.id)}
@@ -721,6 +1200,11 @@ export default function Baloes() {
                   key={e.id}
                   className={`${css.balao} ${css.sub} ${e.projeto ? css.projecao : css.externo} ${apagado(e.id)}`}
                   tabIndex={0}
+                  onPointerDown={aoPressionar}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    tocarNo(e.id);
+                  }}
                   onMouseEnter={() => mostrarNo(e.id)}
                   onMouseLeave={esconder}
                   onFocus={() => mostrarNo(e.id)}
@@ -814,7 +1298,7 @@ export default function Baloes() {
           </div>
         </div>
       </div>
-      <p className={css.dica}>Arraste o mapa para os lados para ver tudo.</p>
+      {!geral && <p className={css.dica}>Arraste o mapa para os lados para ver tudo.</p>}
     </>
   );
 }
