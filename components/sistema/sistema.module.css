@@ -1,0 +1,730 @@
+/* Página /sistema. Em cima, a internet (azul-noite); embaixo, a rede da paróquia (superfície clara);
+   no meio, a divisa em fio dourado tracejado. Cada sistema é um medalhão: disco liso, anel fino dourado,
+   ícone e nome, com a cor do sistema só como detalhe. Os sub-sistemas são medalhões menores em volta.
+   O mapa tem tamanho fixo (1500 x 1300 px): em telas menores ele rola para os lados. */
+.pagina {
+  --noite: #0b1633;
+  --noite-2: #15295c;
+  --perola: #e3e7f0;
+  --ouro: #d9ad45;
+  --ink: #11182a;
+  --muted: #566074;
+  position: relative;
+  min-height: 100vh;
+  background: var(--perola);
+  color: var(--ink);
+}
+
+/* o título fica por cima do céu do mapa (sem faixa própria): o fundo vai do topo da página até a divisa, sem emenda */
+.cabecalho {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  color: #ffffff;
+  padding: 3.2rem 1rem 0;
+  pointer-events: none;
+}
+
+.miolo {
+  max-width: 62.5rem;
+  margin: 0 auto 0 clamp(0rem, 8vw, 20rem); /* encostado à esquerda, para o título não passar por baixo da legenda fixa */
+}
+
+.miolo {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+
+/* medalhão com a logo dos 40 anos: disco claro com anel dourado, no mesmo estilo dos balões */
+.logo40 {
+  flex: none;
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  background: #ffffff;
+  padding: 10px;
+  box-shadow:
+    inset 0 0 0 3px var(--ouro),
+    0 10px 26px rgba(8, 14, 36, 0.35);
+  animation: aparecer 1.2s ease-out 0.3s backwards;
+}
+
+.titulo {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(2rem, 5.2vw, 3.3rem);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  margin: 0 0 0.9rem;
+  max-width: 14em;
+}
+
+.lead {
+  margin: 0;
+  max-width: 34em;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* a faixa do mapa vai de ponta a ponta da tela e rola para os lados quando o mapa é mais largo */
+.rolagem {
+  overflow-x: auto;
+  background: var(--noite);
+}
+
+/* o fundo das duas zonas: céu em cima, superfície clara embaixo, cortados no meio (y = 50%) */
+.superficie {
+  --topo: 250px; /* espaço de céu acima do mapa, onde fica o título */
+  --divisa-q: 650px; /* a mesma altura, contada a partir do topo do quadro (usada pelos rótulos das zonas) */
+  --divisa-y: calc(var(--divisa-q) + var(--topo)); /* altura da linha tracejada (650px = DIVISA_Y no componente, mais o espaço do topo) */
+  position: relative;
+  padding-top: var(--topo);
+  width: max(100%, 1500px);
+  background: linear-gradient(var(--noite), var(--noite-2) var(--divisa-y), #eef0f6 var(--divisa-y), var(--perola));
+}
+
+/* a divisa atravessa a superfície toda */
+.divisa {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--divisa-y);
+  height: 0;
+  border-top: 3px dashed var(--ouro);
+}
+
+.quadro {
+  contain: layout;
+  position: relative;
+  width: 1500px;
+  height: 1420px;
+  margin: 0 auto;
+}
+
+.zona {
+  animation: aparecer 1.2s ease-out 0.2s backwards;
+  position: absolute;
+  left: 24px;
+  max-width: 240px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.zona strong {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.zonaCima {
+  bottom: calc(100% - var(--divisa-q) + 20px);
+  color: #ffffff;
+}
+
+.zonaCima .subZona {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.zonaBaixo {
+  top: calc(var(--divisa-q) + 20px);
+  color: var(--ink);
+}
+
+.subZona {
+  color: var(--muted);
+  text-wrap: balance;
+}
+
+.dica {
+  display: none;
+  margin: 0;
+  padding: 0.7rem 1rem 1.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+@media (max-width: 1499px) {
+  .dica {
+    display: block;
+  }
+}
+
+.baloes {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none; /* o mouse passa até as ligações que ficam por baixo; só os balões recebem o mouse */
+}
+
+/* medalhão: disco branco liso com um anel dourado fino por dentro, como numa moeda, e sombra curta por fora */
+.balao {
+  --cor: #3b4252;
+  --anel: color-mix(in srgb, var(--cor) 72%, #ffffff); /* anel na cor do sistema: agrupa à primeira vista */
+  position: absolute;
+  width: var(--d);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #ffffff;
+  color: var(--ink);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 8px #ffffff,
+    inset 0 0 0 10.5px var(--ouro),
+    0 0 0 4px var(--anel),
+    0 12px 30px rgba(8, 14, 36, 0.26);
+  padding: 0 16px;
+  pointer-events: auto;
+  cursor: help;
+}
+
+.balao:hover {
+  scale: 1.07;
+}
+
+.balao:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 4px;
+}
+
+.icone {
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: var(--cor);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  margin-bottom: 9px;
+}
+
+.nome {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 600;
+  font-size: 21px;
+  line-height: 1.16;
+  letter-spacing: 0.003em;
+}
+
+.traco {
+  width: 30px;
+  height: 3px;
+  margin-top: 11px;
+  border-radius: 2px;
+  background: var(--cor);
+}
+
+/* sub-sistema: medalhão menor, sem ícone */
+.sub {
+  padding: 0 10px;
+  box-shadow:
+    inset 0 0 0 5px #ffffff,
+    inset 0 0 0 7px var(--ouro),
+    0 0 0 3.5px var(--anel),
+    0 8px 20px rgba(8, 14, 36, 0.26);
+}
+
+.sub .nome {
+  font-size: var(--fs, 13.5px);
+}
+
+.sub .traco {
+  width: 20px;
+  height: 2px;
+  margin-top: 7px;
+}
+
+@keyframes surgirSemUso {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -38%) scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -52%) scale(1.07);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* traços entre os sistemas e cadeados: mesma medida do quadro, por isso casam com os balões */
+.ligacoes,
+.cadeados {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.fio {
+  fill: none;
+  stroke: url(#fio-degrade);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+}
+
+.fioSub {
+  stroke-width: 3;
+}
+
+.cadeado {
+}
+
+@keyframes desenhar {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* sistema externo que sai de um sub-sistema: menor que ele, na internet */
+.externo {
+  padding: 0 6px;
+  box-shadow:
+    inset 0 0 0 4px #ffffff,
+    inset 0 0 0 5.5px var(--ouro),
+    0 0 0 3.5px var(--anel),
+    0 6px 16px rgba(8, 14, 36, 0.28);
+}
+
+.externo .nome {
+  font-size: 12px;
+}
+
+.externo .traco {
+  width: 16px;
+  margin-top: 5px;
+}
+
+/* projeção: projeto idealizado, ainda não existe. Anel e traços tracejados */
+.projecao {
+  padding: 0 4px;
+  border: 2.5px dashed var(--ouro);
+  box-shadow:
+    0 0 0 3.5px var(--anel),
+    0 6px 16px rgba(8, 14, 36, 0.28);
+}
+
+.projecao .nome {
+  font-size: 11.5px;
+}
+
+.projecao .traco {
+  width: 14px;
+  margin-top: 4px;
+}
+
+.fioProjecao {
+  stroke-dasharray: 0.012 0.02;
+}
+
+.painelLegenda {
+  animation: aparecer 1s ease-out 0.4s backwards;
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  width: max-content;
+  max-width: min(540px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(11, 22, 51, 0.94);
+  box-shadow: 0 10px 28px rgba(8, 14, 36, 0.35);
+}
+
+.legendaProjecao {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.amostraProjecao {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px dashed var(--ouro);
+}
+
+/* a ligação sob o mouse fica mais grossa */
+.fio.fioAtivo {
+  stroke-width: 7;
+}
+
+/* balão de explicação (círculo ou ligação), no mesmo estilo dos medalhões */
+.info {
+  position: absolute;
+  z-index: 30;
+  width: 320px;
+  padding: 14px 16px 15px;
+  transform: translate(-50%, -100%);
+  background: #ffffff;
+  color: var(--ink);
+  border: 2px solid var(--ouro);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(8, 14, 36, 0.38);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.35s ease,
+    visibility 0s linear 0.35s;
+}
+
+.infoVisivel {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease;
+}
+
+.infoAbaixo {
+  transform: translate(-50%, 0);
+}
+
+.infoTitulo {
+  display: block;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.infoEtiqueta {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.infoTexto {
+  margin: 9px 0 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+/* balão do cadeado: dois blocos (para que serve e como está protegido) */
+.infoBloco {
+  display: block;
+  margin-bottom: 1px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cadeado:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* destaque: o que não faz parte fica esmaecido (!important porque a animação de entrada fixa a opacidade) */
+.apagado {
+  opacity: 0.26;
+}
+
+.apagadoFio {
+  opacity: 0.1;
+}
+
+/* as animações de entrada só valem antes (fill-mode backwards): depois, a opacidade volta a ser comum e o esmaecer é gradual */
+.balao,
+.fio,
+.fluxo,
+.cadeado {
+  transition:
+    opacity 0.7s ease,
+    scale 0.55s cubic-bezier(0.34, 1.4, 0.64, 1),
+    stroke-width 0.3s ease,
+    stroke-dashoffset 0.9s ease;
+}
+
+/* ainda não chegou a vez: o balão está encolhido e transparente; ao chegar, cresce com um leve pulo */
+.oculto {
+  opacity: 0 !important;
+  scale: 0.45;
+  pointer-events: none !important;
+}
+
+/* o traço só se desenha depois que os dois balões que ele liga já abriram */
+.fioOculto {
+  stroke-dashoffset: 1;
+  opacity: 0 !important;
+}
+
+.camadaFluxo {
+  will-change: transform;
+}
+
+/* pontinhos que correm nas ligações que cruzam a divisa: a troca entre a internet e a paróquia */
+.fluxo {
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 0.1 26;
+  pointer-events: none;
+  animation:
+    fluir 1.6s steps(20) infinite,
+    aparecer 1.6s ease-in backwards;
+}
+
+@keyframes fluir {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 26.1;
+  }
+}
+
+/* legenda dos sistemas (clicável: destaca o sistema com tudo o que é dele) */
+.legendaSistemas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.chipSistema {
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 6px 13px 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chipSistema:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.chipSistema[aria-pressed="true"] {
+  background: #ffffff;
+  color: var(--ink);
+  border-color: #ffffff;
+}
+
+.chipSistema:focus-visible {
+  outline: 3px solid var(--ouro);
+  outline-offset: 2px;
+}
+
+.pontoSistema {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+/* sem movimento para quem prefere assim: ficam só o destaque e as cores */
+@media (prefers-reduced-motion: reduce) {
+  .fluxo {
+    animation: none;
+    display: none;
+  }
+  .brilho,
+  .estrelas {
+    animation: none;
+  }
+  .balao:hover {
+    scale: 1;
+  }
+}
+
+/* fundo vivo: manchas de luz que vagam e estrelas que sobem e cintilam. Só `transform` e `opacity` (feitos na placa de vídeo, sem repintar a página) */
+.fundoVivo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(#000 calc(100% - 260px), transparent); /* esmaece no pé, sem corte seco */
+}
+
+.brilho {
+  position: absolute;
+  width: 900px;
+  height: 900px;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.brilhoA {
+  left: -150px;
+  top: -250px;
+  background: radial-gradient(closest-side, rgba(80, 125, 240, 0.5), transparent);
+  animation: vagar 17s ease-in-out infinite alternate;
+}
+
+.brilhoB {
+  right: -200px;
+  top: 80px;
+  background: radial-gradient(closest-side, rgba(20, 160, 175, 0.42), transparent);
+  animation: vagar 21s ease-in-out -8s infinite alternate-reverse;
+}
+
+.brilhoC {
+  left: 28%;
+  top: 760px;
+  background: radial-gradient(closest-side, rgba(217, 173, 69, 0.3), transparent);
+  animation: vagar 25s ease-in-out -14s infinite alternate;
+}
+
+@keyframes vagar {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(560px, 300px, 0) scale(1.3);
+  }
+}
+
+.ceu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--divisa-y);
+  overflow: hidden;
+}
+
+.estrelas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 340px);
+  will-change: transform, opacity;
+  background-repeat: repeat;
+}
+
+.estrelasA {
+  background-image:
+    radial-gradient(2px 2px at 30px 40px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 120px 160px, #ffffff, transparent),
+    radial-gradient(2.2px 2.2px at 210px 90px, #f3d27c, transparent),
+    radial-gradient(1.5px 1.5px at 260px 240px, #ffffff, transparent);
+  background-size: 300px 300px;
+  animation:
+    cintilar 3.2s ease-in-out infinite alternate,
+    subir300 45s linear infinite;
+}
+
+.estrelasB {
+  background-image:
+    radial-gradient(1.8px 1.8px at 80px 110px, #ffffff, transparent),
+    radial-gradient(2.2px 2.2px at 170px 30px, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 240px 180px, #f3d27c, transparent),
+    radial-gradient(1.8px 1.8px at 20px 250px, #ffffff, transparent);
+  background-size: 340px 340px;
+  animation:
+    cintilar 4.6s ease-in-out -2s infinite alternate,
+    subir340 70s linear infinite;
+}
+
+@keyframes subir300 {
+  to {
+    transform: translate3d(0, -300px, 0);
+  }
+}
+
+@keyframes subir340 {
+  to {
+    transform: translate3d(0, -340px, 0);
+  }
+}
+
+@keyframes cintilar {
+  from {
+    opacity: 0.08;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* telas estreitas: a legenda desce para a base, menor, e a logo diminui, para não cobrirem o mapa */
+@media (max-width: 700px) {
+  .painelLegenda {
+    top: auto;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+  .legendaSistemas {
+    justify-content: flex-start;
+    gap: 5px;
+  }
+  .chipSistema {
+    font-size: 11.5px;
+    padding: 4px 9px 4px 7px;
+    gap: 6px;
+  }
+  .legendaProjecao {
+    font-size: 12px;
+  }
+  .logo40 {
+    width: 74px;
+    height: 74px;
+    padding: 6px;
+  }
+  .miolo {
+    gap: 0.9rem;
+  }
+}
