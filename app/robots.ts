@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/admin", "/api/"],
+      disallow: ["/admin", "/etm", "/api/"],
     },
     sitemap: "https://igorarthurdev.com.br/sitemap.xml",
   };

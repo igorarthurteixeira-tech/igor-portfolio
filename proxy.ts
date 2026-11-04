@@ -6,10 +6,12 @@ export async function proxy(request: NextRequest) {
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const ehAdmin = pathname.startsWith("/admin");
   const ehLogin = pathname === "/admin/login";
 
+  // fora do painel (área da ETM) o proxy só renova a sessão; quem barra é a própria página
   if (!url || !key) {
-    return ehLogin ? NextResponse.next() : redirecionarLogin(request);
+    return !ehAdmin || ehLogin ? NextResponse.next() : redirecionarLogin(request);
   }
 
   let response = NextResponse.next({ request });
@@ -27,6 +29,7 @@ export async function proxy(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getUser();
+  if (!ehAdmin) return response;
   const permitido = process.env.ADMIN_EMAIL?.toLowerCase();
   const autorizado =
     !!data.user && !!permitido && data.user.email?.toLowerCase() === permitido;
@@ -42,4 +45,4 @@ function redirecionarLogin(request: NextRequest) {
   return NextResponse.redirect(new URL("/admin/login", request.url));
 }
 
-export const config = { matcher: ["/admin/:path*"] };
+export const config = { matcher: ["/admin/:path*", "/etm/:path*", "/etm"] };

@@ -11,19 +11,22 @@ export const metadata: Metadata = {
 /** Números que aparecem nas abas: o que está esperando alguma ação sua. */
 async function contagens(): Promise<Contagens> {
   const db = supabaseAdmin();
-  if (!db) return { publicacoes: 0, serie: 0, mensagens: 0 };
+  if (!db) return { publicacoes: 0, serie: 0, mensagens: 0, etm: 0 };
   const agora = new Date().toISOString();
-  const [msgs, coms, pubs] = await Promise.all([
+  const [msgs, coms, pubs, etm, etmGente] = await Promise.all([
     db.from("mensagens").select("*", { count: "exact", head: true }).eq("lida", false),
     db.from("serie_comentarios").select("*", { count: "exact", head: true }).eq("aprovado", false),
     db.from("publicacoes").select("status_redes,agendada_em").limit(300),
+    // pedidos da ETM esperando uma ação sua: novos, com correção pedida ou aprovados (falta enviar)
+    db.from("etm_pedidos").select("*", { count: "exact", head: true }).in("status", ["recebido", "correcao", "aprovado"]),
+    db.from("etm_usuarios").select("*", { count: "exact", head: true }).eq("situacao", "pendente"),
   ]);
   const precisaAtencao = (pubs.data ?? []).filter((p) => {
     const st = Object.values((p.status_redes ?? {}) as Record<string, string>);
     const atrasada = !!p.agendada_em && p.agendada_em < agora && st.some((s) => s === "pendente");
     return st.includes("erro") || atrasada;
   }).length;
-  return { publicacoes: precisaAtencao, serie: coms.count ?? 0, mensagens: msgs.count ?? 0 };
+  return { publicacoes: precisaAtencao, serie: coms.count ?? 0, mensagens: msgs.count ?? 0, etm: (etm.count ?? 0) + (etmGente.count ?? 0) };
 }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

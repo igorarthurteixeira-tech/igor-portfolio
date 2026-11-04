@@ -1,0 +1,31 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { getAdminUser } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { carregarDetalhe, limiteDeEnvio } from "@/lib/etm-servidor";
+import DetalhePedido from "@/components/etm/DetalhePedido";
+import AcoesPedido from "@/components/etm/AcoesPedido";
+import ExcluirPedido from "@/components/admin/ExcluirPedido";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminPedidoEtmPage({ params }: { params: Promise<{ id: string }> }) {
+  if (!(await getAdminUser())) redirect("/admin/login");
+  const { id } = await params;
+  const db = supabaseAdmin();
+  const detalhe = db ? await carregarDetalhe(db, id) : null;
+  if (!detalhe) notFound();
+
+  return (
+    <section className="bg-page-2 px-6 pb-24 pt-10">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/admin/etm" className="text-sm font-medium text-muted hover:text-fg">← Voltar aos pedidos</Link>
+          <ExcluirPedido id={id} />
+        </div>
+        <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="igor" limite={await limiteDeEnvio(db!)} />
+        <DetalhePedido {...detalhe} />
+      </div>
+    </section>
+  );
+}

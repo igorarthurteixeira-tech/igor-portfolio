@@ -178,3 +178,49 @@ section[id] {
 main > * {
   scroll-margin-top: 4rem;
 }
+
+/*
+ * Área da ETM: fundo azul vivo, animado só com transform (a placa de vídeo cuida disso, sem repintar a tela).
+ * Não usar background-position nem filter: blur em animação: repintam a seção inteira a cada quadro.
+ */
+@keyframes etm-deslizar {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+/* a faixa nasce e some com a opacidade, já fora da tela: sem "pulo" quando o ciclo recomeça */
+@keyframes etm-varrer {
+  0% { transform: translate3d(-80%, 0, 0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate3d(80%, 0, 0); opacity: 0; }
+}
+@keyframes etm-flutuar {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(45px, -30px, 0) scale(1.1); }
+  100% { transform: translate3d(-35px, 25px, 0) scale(0.96); }
+}
+.fundo-etm {
+  background-color: #0a1f66;
+  background-image: linear-gradient(115deg, #071344 0%, #2b6cf5 50%, #071344 100%);
+}
+/* duas voltas do mesmo degradê lado a lado: deslizar metade da largura fecha o laço sem emenda */
+.etm-degrade {
+  /* horizontal de propósito: na diagonal as pontas não casam e aparece uma emenda vertical */
+  background-image: linear-gradient(90deg, #0a1a56 0%, #2358d6 25%, #0b2272 50%, #2f64d9 75%, #0a1a56 100%);
+  background-size: 50% 100%;
+  background-repeat: repeat-x;
+  animation: etm-deslizar 36s linear infinite;
+  will-change: transform;
+}
+.etm-faixa-1 {
+  background-image: linear-gradient(110deg, transparent 38%, rgba(224, 242, 254, 0.24) 50%, transparent 62%);
+  animation: etm-varrer 18s linear infinite;
+  will-change: transform;
+}
+.etm-faixa-2 {
+  background-image: linear-gradient(68deg, transparent 30%, rgba(147, 197, 253, 0.2) 50%, transparent 70%);
+  animation: etm-varrer 28s linear -10s infinite reverse;
+  will-change: transform;
+}
+.etm-brilho-a { animation: etm-flutuar 16s ease-in-out infinite alternate; will-change: transform; }
+.etm-brilho-b { animation: etm-flutuar 20s ease-in-out -5s infinite alternate-reverse; will-change: transform; }

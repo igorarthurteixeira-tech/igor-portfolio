@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -42,6 +42,11 @@ const ESPALHADO = [
 ];
 
 const INTERVALO = 3600;
+// depois que um efeito começa (espalhar ou voltar ao ciclo), ele fica pelo menos este tempo antes de trocar
+// para o outro; sem isso, o ponteiro na borda dos cartões alterna os dois efeitos e a troca fica visível
+const PERMANENCIA = 700;
+// ao tirar o mouse, espera um pouco antes de recolher (o ponteiro costuma voltar logo)
+const SAIDA = 450;
 const LARGURA = 540;
 const ALTURA = 500;
 
@@ -51,6 +56,31 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
   const [escala, setEscala] = useState(1);
   const raiz = useRef<HTMLDivElement>(null);
   const tocou = useRef(false);
+  const estado = useRef(false);
+  const desde = useRef(0);
+  const pendente = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  /** Troca de efeito na hora (toque: é uma escolha clara da pessoa). */
+  const aplicar = useCallback((valor: boolean) => {
+    clearTimeout(pendente.current);
+    if (estado.current === valor) return;
+    estado.current = valor;
+    desde.current = Date.now();
+    setEspalhado(valor);
+  }, []);
+
+  /** Pedido do mouse ou do foco: respeita a permanência mínima do efeito atual antes de trocar. */
+  const pedir = useCallback(
+    (valor: boolean) => {
+      clearTimeout(pendente.current);
+      if (estado.current === valor) return;
+      const espera = Math.max(valor ? 0 : SAIDA, PERMANENCIA - (Date.now() - desde.current));
+      pendente.current = setTimeout(() => aplicar(valor), espera);
+    },
+    [aplicar],
+  );
+
+  useEffect(() => () => clearTimeout(pendente.current), []);
 
   // o conjunto tem 540x500 px; em telas estreitas ele encolhe por inteiro (mesmas posições)
   useEffect(() => {
@@ -67,11 +97,11 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
   useEffect(() => {
     if (!espalhado) return;
     const fora = (e: PointerEvent) => {
-      if (e.pointerType === "touch" && !raiz.current?.contains(e.target as Node)) setEspalhado(false);
+      if (e.pointerType === "touch" && !raiz.current?.contains(e.target as Node)) aplicar(false);
     };
     document.addEventListener("pointerdown", fora);
     return () => document.removeEventListener("pointerdown", fora);
-  }, [espalhado]);
+  }, [espalhado, aplicar]);
 
   useEffect(() => {
     if (espalhado) return;
@@ -92,10 +122,10 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
       onPointerDown={(e) => {
         tocou.current = e.pointerType === "touch";
       }}
-      onPointerEnter={(e) => e.pointerType !== "touch" && setEspalhado(true)}
-      onPointerLeave={(e) => e.pointerType !== "touch" && setEspalhado(false)}
-      onFocus={() => !tocou.current && setEspalhado(true)}
-      onBlur={() => !tocou.current && setEspalhado(false)}
+      onPointerEnter={(e) => e.pointerType !== "touch" && pedir(true)}
+      onPointerLeave={(e) => e.pointerType !== "touch" && pedir(false)}
+      onFocus={() => !tocou.current && pedir(true)}
+      onBlur={() => !tocou.current && pedir(false)}
     >
     <div
       className="absolute left-1/2 top-0 origin-top"
@@ -132,7 +162,7 @@ export default function HeroVitrine({ itens }: { itens: Item[] }) {
                   onClick={(e) => {
                     if (tocou.current && !espalhado) {
                       e.preventDefault();
-                      setEspalhado(true);
+                      aplicar(true);
                     }
                   }}
                   aria-label={`Ver ${it.nome} na biblioteca de projetos`}

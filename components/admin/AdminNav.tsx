@@ -4,19 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { sair } from "@/app/(site)/admin/actions";
 
-export type Contagens = { publicacoes: number; serie: number; mensagens: number };
+export type Contagens = { publicacoes: number; serie: number; mensagens: number; etm: number };
 
 const ICONES = {
   geral: "M4 20V10m6 10V4m6 16v-7m6 7H2",
   publicacoes: "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
   serie: "M5 3l14 9-14 9V3z",
   mensagens: "M3 6h18v12H3zM3 7l9 6 9-6",
+  etm: "M4 5h16v11H4zM8 20h8M12 16v4",
 } as const;
 
 const ABAS = [
   { href: "/admin", rotulo: "Visão geral", chave: null, icone: ICONES.geral },
   { href: "/admin/publicacoes", rotulo: "Publicações", chave: "publicacoes", icone: ICONES.publicacoes },
   { href: "/admin/serie", rotulo: "Série", chave: "serie", icone: ICONES.serie },
+  { href: "/admin/etm", rotulo: "ETM", chave: "etm", icone: ICONES.etm },
   { href: "/admin/mensagens", rotulo: "Mensagens", chave: "mensagens", icone: ICONES.mensagens },
 ] as const;
 
