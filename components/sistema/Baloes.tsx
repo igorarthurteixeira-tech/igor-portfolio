@@ -590,7 +590,14 @@ export default function Baloes() {
     }
     const PAD = 36;
     const { topoUtil, alturaUtil } = areaUtil();
-    const z = Math.min(1, Math.max(paramsGeral.current.escala, Math.min(window.innerWidth / 2 / (meioW + PAD), alturaUtil / 2 / (meioH + PAD))));
+    // O zoom ideal faz caber tudo o que se liga ao item. Mas há itens cujos ligados estão espalhados pelo mapa inteiro (Site, Portal IDE):
+    // caber tudo daria quase a visão geral, com texto ilegível. Por isso há um piso de leitura: o item e o que está em volta dele ficam
+    // legíveis, e o que está mais longe sai da tela (continua destacado).
+    // O piso depende do tamanho da letra do item (sistema 21 px, sub-sistema 13,5, balões pequenos 11,5): o nome sempre fica com uns 11 px na tela.
+    const fontePx = sistemas.some((s) => s.id === id) ? 21 : c.r > 66 ? 15.5 : c.r > 50 ? 13.5 : 11.5;
+    const pisoLeitura = Math.min(1, Math.max(0.62, 11 / fontePx));
+    const caber = Math.min(window.innerWidth / 2 / (meioW + PAD), alturaUtil / 2 / (meioH + PAD));
+    const z = Math.min(1, Math.max(paramsGeral.current.escala, pisoLeitura, caber));
     return { z, qx: c.x, qy: c.y, sx: window.innerWidth / 2, sy: topoUtil + alturaUtil / 2 };
   };
   const vistaDaTela = (): Vista => vistaAtual.current ?? vistaGeral();

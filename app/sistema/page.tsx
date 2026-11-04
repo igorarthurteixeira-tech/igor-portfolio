@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Newsreader } from "next/font/google";
 import Baloes from "@/components/sistema/Baloes";
 import Lista from "@/components/sistema/Lista";
@@ -25,6 +25,14 @@ export const metadata: Metadata = {
     locale: "pt_BR",
   },
   twitter: { card: "summary", title: titulo, description: descricao },
+};
+
+// O zoom de pinça do navegador desalinha o zoom do próprio mapa (que mede a janela): nesta página ele fica desligado.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function PaginaSistema() {

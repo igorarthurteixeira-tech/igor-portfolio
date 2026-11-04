@@ -3,6 +3,7 @@
    ícone e nome, com a cor do sistema só como detalhe. Os sub-sistemas são medalhões menores em volta.
    O mapa tem tamanho fixo (1500 x 1300 px): em telas menores ele rola para os lados. */
 .pagina {
+  touch-action: pan-x pan-y; /* rolar pode, pinçar para dar zoom na página não (o mapa tem o zoom dele; o do navegador o desalinhava) */
   --noite: #0b1633;
   --noite-2: #15295c;
   --perola: #e3e7f0;
