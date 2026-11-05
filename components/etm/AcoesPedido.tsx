@@ -10,6 +10,7 @@ import {
   comentarComoIgor,
   criarUploadUrlAdminEtm,
   entregarVersao,
+  fazerPergunta,
   mudarStatus,
 } from "@/app/(site)/admin/etm/actions";
 import SeletorArquivos from "./SeletorArquivos";
@@ -38,7 +39,7 @@ function faseDe(status: StatusPedido): Fase {
 const TEXTOS: Record<Fase, { titulo: string; ajuda: string; placeholder: string }> = {
   aceitar: {
     titulo: "Responder ao pedido",
-    ajuda: "Avise a ETM que você viu o pedido e que a produção começou. A mensagem é opcional.",
+    ajuda: "Avise a ETM que você viu o pedido e que a produção começou (a mensagem é opcional), ou tire uma dúvida: a pergunta aparece em destaque para a ETM responder.",
     placeholder: "Opcional. Ex.: Recebi o pedido e começo a produção hoje.",
   },
   entregar: {
@@ -229,6 +230,15 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
                 className="btn-dark px-5 py-2.5"
               >
                 Enviar para avaliação
+              </button>
+            )}
+            {(fase === "aceitar" || fase === "entregar") && (
+              <button
+                disabled={ocupado}
+                onClick={() => rodar(() => fazerPergunta(pedidoId, texto))}
+                className="rounded-xl border border-amber-400 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
+              >
+                Fazer pergunta à ETM
               </button>
             )}
             {fase === "enviar" && (

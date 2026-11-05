@@ -80,6 +80,20 @@ export async function entregarVersao(
   return { ok: true };
 }
 
+/** Pergunta à ETM sobre o pedido: aparece em destaque para eles até serem respondida. */
+export async function fazerPergunta(pedidoId: string, texto: string): Promise<Resultado> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };
+  const msg = limpar(texto, 4000);
+  if (msg.length < 5) return { ok: false, erro: "Escreva a pergunta para a ETM." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  await criarEvento(db, { pedido_id: pedidoId, autor: "igor", autor_nome: NOME_ADMIN, tipo: "duvida", texto: msg });
+  await atualizarPedido(db, pedidoId);
+  atualizarTelas(pedidoId);
+  return { ok: true };
+}
+
 export async function comentarComoIgor(pedidoId: string, texto: string, arquivos: ArquivoEnviado[]): Promise<Resultado> {
   if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
   if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };

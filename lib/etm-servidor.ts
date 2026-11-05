@@ -136,7 +136,7 @@ export async function validarArquivos(pedidoId: string, arquivos: unknown): Prom
 export async function criarEvento(
   db: Db,
   e: Pick<Evento, "autor" | "autor_nome" | "tipo"> &
-    Partial<Pick<Evento, "texto" | "status_novo" | "versao" | "link">> & { pedido_id: string },
+    Partial<Pick<Evento, "texto" | "status_novo" | "versao" | "link" | "responde_a">> & { pedido_id: string },
 ): Promise<string | null> {
   const { data, error } = await db
     .from("etm_eventos")
@@ -149,6 +149,7 @@ export async function criarEvento(
       status_novo: e.status_novo ?? null,
       versao: e.versao ?? null,
       link: e.link || null,
+      responde_a: e.responde_a ?? null,
     })
     .select("id")
     .single();
@@ -247,7 +248,7 @@ export async function carregarResumos(db: Db, ids: string[]) {
   const [{ data: eventos }, { data: arquivos }] = await Promise.all([
     db
       .from("etm_eventos")
-      .select("pedido_id,tipo,autor_nome,texto,criado_em")
+      .select("id,pedido_id,tipo,autor_nome,texto,criado_em,responde_a")
       .in("pedido_id", ids)
       .order("criado_em", { ascending: false })
       .limit(3000),
@@ -255,18 +256,23 @@ export async function carregarResumos(db: Db, ids: string[]) {
   ]);
   const obter = (id: string) => {
     let r = mapa.get(id);
-    if (!r) mapa.set(id, (r = { arquivos: 0, versoes: 0, ultimo: null }));
+    if (!r) mapa.set(id, (r = { arquivos: 0, versoes: 0, perguntasAbertas: 0, ultimo: null }));
     return r;
   };
+  const perguntas = new Map<string, string[]>();
+  const respondidas = new Set<string>();
   for (const e of eventos ?? []) {
     const r = obter(e.pedido_id as string);
     if (e.tipo === "entrega") r.versoes += 1;
+    if (e.tipo === "duvida") perguntas.set(e.pedido_id as string, [...(perguntas.get(e.pedido_id as string) ?? []), e.id as string]);
+    if (e.tipo === "resposta" && e.responde_a) respondidas.add(e.responde_a as string);
     // mais recente primeiro: o primeiro que não for a criação é a última movimentação
     if (!r.ultimo && e.tipo !== "criado") {
       r.ultimo = { autor_nome: e.autor_nome, tipo: e.tipo, texto: e.texto, criado_em: e.criado_em };
     }
   }
   for (const a of arquivos ?? []) obter(a.pedido_id as string).arquivos += 1;
+  for (const [pedidoId, ids] of perguntas) obter(pedidoId).perguntasAbertas = ids.filter((i) => !respondidas.has(i)).length;
   return mapa;
 }
 

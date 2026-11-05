@@ -7,6 +7,7 @@ import {
   rotuloTipo,
   tamanhoLegivel,
   youtubeId,
+  perguntasAbertas,
   type Evento,
   type Pedido,
 } from "@/lib/etm";
@@ -93,6 +94,8 @@ function titulo(e: Evento) {
     case "entrega": return `Versão ${e.versao ?? ""} entregue para avaliação`;
     case "correcao": return "Correção solicitada";
     case "aprovacao": return "Vídeo aprovado";
+    case "duvida": return "Pergunta";
+    case "resposta": return "Resposta";
     case "status": return `Status: ${e.status_novo ? STATUS[e.status_novo].rotulo : ""}`;
     default: return "Mensagem";
   }
@@ -105,6 +108,8 @@ const COR_BORDA: Record<Evento["tipo"], string> = {
   entrega: "border-l-amber-500",
   correcao: "border-l-orange-500",
   aprovacao: "border-l-emerald-500",
+  duvida: "border-l-amber-500",
+  resposta: "border-l-emerald-500",
 };
 
 export default function DetalhePedido({
@@ -124,6 +129,8 @@ export default function DetalhePedido({
     ["Prazo desejado", dataCurtaIso(pedido.prazo)],
     ["Aberto em", dataHora(pedido.criado_em)],
   ];
+
+  const abertas = new Set(perguntasAbertas(eventos).map((e) => e.id));
 
   return (
     <div className="space-y-6">
@@ -162,9 +169,14 @@ export default function DetalhePedido({
         <h2 className="mb-3 text-lg font-bold tracking-tight text-fg">Andamento</h2>
         <ol className="space-y-4">
           {[...eventos].reverse().map((e) => (
-            <li key={e.id} className={`card border-l-4 p-5 ${COR_BORDA[e.tipo]}`}>
+            <li key={e.id} className={`card border-l-4 p-5 ${COR_BORDA[e.tipo]} ${abertas.has(e.id) ? "bg-amber-50" : ""}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-semibold text-fg">{titulo(e)}</p>
+                <p className="font-semibold text-fg">
+                  {titulo(e)}
+                  {abertas.has(e.id) && (
+                    <span className="ml-2 rounded-full bg-amber-500 px-2.5 py-0.5 align-middle text-[11px] font-bold text-white">Aguardando resposta</span>
+                  )}
+                </p>
                 <p className="text-xs text-muted">
                   {e.autor_nome} · {dataHora(e.criado_em)}
                 </p>

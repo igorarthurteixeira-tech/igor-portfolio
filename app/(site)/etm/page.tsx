@@ -28,6 +28,7 @@ export default async function EtmPage({
   const contagens = contarGrupos(pedidos, ACAO);
   // os resumos de todos os cartões vêm junto: o filtro roda no navegador e não volta ao servidor
   const resumos = db ? Object.fromEntries(await carregarResumos(db, pedidos.map((p) => p.id))) : {};
+  const comPergunta = Object.values(resumos).filter((r) => r.perguntasAbertas > 0).length;
 
   return (
     <div className="bg-page-2 pb-24">
@@ -39,6 +40,19 @@ export default async function EtmPage({
       />
 
       <div className="relative z-10 mx-auto -mt-14 max-w-4xl space-y-6 px-6">
+        {comPergunta > 0 && (
+          <div className="card flex items-center gap-3 border-2 border-amber-400 bg-amber-50 px-5 py-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-sm font-bold text-white">
+              {comPergunta}
+            </span>
+            <p className="text-sm font-semibold text-amber-900">
+              {comPergunta === 1
+                ? "1 pedido tem uma pergunta esperando a sua resposta."
+                : `${comPergunta} pedidos têm perguntas esperando a sua resposta.`}
+            </p>
+          </div>
+        )}
+
         {contagens.acao > 0 && (
           <div className="card flex items-center gap-3 border-amber-300 bg-amber-50 px-5 py-4">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-sm font-bold text-white">
@@ -53,6 +67,7 @@ export default async function EtmPage({
         )}
 
         <FeedFiltravel
+          destacarPerguntas
           pedidos={pedidos}
           resumos={resumos}
           base="/etm"

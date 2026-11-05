@@ -75,11 +75,13 @@ export type Evento = {
   pedido_id: string;
   autor: "etm" | "igor";
   autor_nome: string;
-  tipo: "criado" | "comentario" | "status" | "entrega" | "correcao" | "aprovacao";
+  tipo: "criado" | "comentario" | "status" | "entrega" | "correcao" | "aprovacao" | "duvida" | "resposta";
   texto: string;
   status_novo: StatusPedido | null;
   versao: number | null;
   link: string | null;
+  /** Numa resposta, o id da pergunta que ela responde. */
+  responde_a: string | null;
   criado_em: string;
 };
 
@@ -158,12 +160,22 @@ export const ROTULO_EVENTO: Record<Evento["tipo"], string> = {
   entrega: "Nova versão entregue",
   correcao: "Correção solicitada",
   aprovacao: "Vídeo aprovado",
+  duvida: "Pergunta",
+  resposta: "Resposta",
 };
+
+/** Perguntas que ainda não têm resposta (a resposta aponta para a pergunta em `responde_a`). */
+export function perguntasAbertas(eventos: Evento[]) {
+  const respondidas = new Set(eventos.filter((e) => e.tipo === "resposta").map((e) => e.responde_a));
+  return eventos.filter((e) => e.tipo === "duvida" && !respondidas.has(e.id));
+}
 
 /** O que aparece no cartão do pedido além dos dados dele. */
 export type ResumoPedido = {
   arquivos: number;
   versoes: number;
+  /** Perguntas feitas à ETM que ainda não foram respondidas. */
+  perguntasAbertas: number;
   ultimo: Pick<Evento, "autor_nome" | "tipo" | "texto" | "criado_em"> | null;
 };
 

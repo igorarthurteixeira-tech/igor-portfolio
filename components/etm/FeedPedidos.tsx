@@ -33,20 +33,35 @@ function Cartao({
   resumo,
   base,
   aguarda,
+  destacarPerguntas,
 }: {
   pedido: Pedido;
   resumo?: ResumoPedido;
   base: string;
   aguarda: boolean;
+  destacarPerguntas: boolean;
 }) {
   const ultimo = resumo?.ultimo;
+  const perguntas = resumo?.perguntasAbertas ?? 0;
+  // para a ETM a pergunta aberta destaca o cartão inteiro; para quem produz é só um aviso de que falta resposta
+  const destaque = destacarPerguntas && perguntas > 0;
   return (
-    <Link href={`${base}/${p.id}`} className={`card card-hover group block border-l-4 p-5 ${BORDA[p.status]}`}>
+    <Link
+      href={`${base}/${p.id}`}
+      className={`card card-hover group block border-l-4 p-5 ${BORDA[p.status]} ${destaque ? "bg-amber-50 ring-2 ring-amber-400" : ""}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold text-muted">
           #{p.numero} · {hora(p.criado_em)}
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          {perguntas > 0 && (
+            <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white">
+              {destacarPerguntas
+                ? perguntas > 1 ? `${perguntas} perguntas para você` : "Pergunta para você"
+                : "Aguardando resposta da ETM"}
+            </span>
+          )}
           {aguarda && <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white">Precisa de ação</span>}
           {p.urgente && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">Urgente</span>}
           <SeloStatus status={p.status} />
@@ -93,12 +108,15 @@ export default function FeedPedidos({
   base,
   precisaAcao,
   vazio,
+  destacarPerguntas = false,
 }: {
   pedidos: Pedido[];
   resumos: Record<string, ResumoPedido>;
   base: string;
   precisaAcao: StatusPedido[];
   vazio: string;
+  /** Na área da ETM, pergunta sem resposta destaca o cartão. */
+  destacarPerguntas?: boolean;
 }) {
   if (pedidos.length === 0) {
     return (
@@ -127,7 +145,7 @@ export default function FeedPedidos({
           <ul className="space-y-3">
             {d.itens.map((p) => (
               <li key={p.id}>
-                <Cartao pedido={p} resumo={resumos[p.id]} base={base} aguarda={precisaAcao.includes(p.status)} />
+                <Cartao pedido={p} resumo={resumos[p.id]} base={base} aguarda={precisaAcao.includes(p.status)} destacarPerguntas={destacarPerguntas} />
               </li>
             ))}
           </ul>

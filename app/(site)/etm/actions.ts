@@ -220,3 +220,40 @@ export async function criarTipo(nome: string, descricao: string): Promise<Result
   revalidatePath("/admin/etm");
   return { ok: true, tipo: { rotulo: n, descricao: d } };
 }
+
+/** A ETM responde a uma pergunta de quem produz; a pergunta deixa de ficar em destaque. */
+export async function responderDuvida(pedidoId: string, duvidaId: string, texto: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId) || !ehUuid(duvidaId)) return { ok: false, erro: "Pergunta inválida." };
+  const msg = limpar(texto, 4000);
+  if (msg.length < 2) return { ok: false, erro: "Escreva a resposta." };
+
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+  const { data: duvida } = await db
+    .from("etm_eventos")
+    .select("id")
+    .eq("id", duvidaId)
+    .eq("pedido_id", pedidoId)
+    .eq("tipo", "duvida")
+    .maybeSingle();
+  if (!duvida) return { ok: false, erro: "Pergunta não encontrada." };
+  const { data: jaRespondida } = await db.from("etm_eventos").select("id").eq("responde_a", duvidaId).limit(1);
+  if (jaRespondida?.length) return { ok: false, erro: "Esta pergunta já foi respondida." };
+
+  await criarEvento(db, {
+    pedido_id: pedidoId,
+    autor: "etm",
+    autor_nome: user.nome,
+    tipo: "resposta",
+    texto: msg,
+    responde_a: duvidaId,
+  });
+  await atualizarPedido(db, pedidoId);
+  revalidatePath(`/etm/${pedidoId}`);
+  revalidatePath(`/admin/etm/${pedidoId}`);
+  revalidatePath("/etm");
+  revalidatePath("/admin", "layout");
+  return { ok: true };
+}
