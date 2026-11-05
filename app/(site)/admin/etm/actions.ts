@@ -52,6 +52,12 @@ export async function entregarVersao(
 
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Supabase não configurado." };
+  // a entrega é a passagem de "em produção" para a avaliação: antes disso, só o aviso de que a produção começou
+  const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", pedidoId).maybeSingle();
+  if (!pedido) return { ok: false, erro: "Pedido não encontrado." };
+  if (pedido.status !== "em_producao") {
+    return { ok: false, erro: "Inicie a produção antes de entregar uma versão." };
+  }
   const { count } = await db
     .from("etm_eventos")
     .select("*", { count: "exact", head: true })

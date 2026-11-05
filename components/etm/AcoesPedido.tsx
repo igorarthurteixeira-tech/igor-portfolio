@@ -17,6 +17,52 @@ import SeletorArquivos from "./SeletorArquivos";
 type Props = { pedidoId: string; status: StatusPedido; modo: "etm" | "igor"; limite: number; usuarioId: string };
 type Resp = { ok: true } | { ok: false; erro: string };
 
+/**
+ * Em que ponto do fluxo o pedido está, do lado de quem produz:
+ * - aceitar: acabou de chegar (ou voltou com pedido de correção); basta avisar que viu e começou;
+ * - entregar: em produção; é aqui que se envia o vídeo, passando para a avaliação;
+ * - aguardar: a ETM está avaliando;
+ * - enviar: a ETM aprovou; falta o envio final;
+ * - encerrado: enviado ou cancelado.
+ */
+type Fase = "aceitar" | "entregar" | "aguardar" | "enviar" | "encerrado";
+
+function faseDe(status: StatusPedido): Fase {
+  if (status === "recebido" || status === "correcao") return "aceitar";
+  if (status === "em_producao") return "entregar";
+  if (status === "em_avaliacao") return "aguardar";
+  if (status === "aprovado") return "enviar";
+  return "encerrado";
+}
+
+const TEXTOS: Record<Fase, { titulo: string; ajuda: string; placeholder: string }> = {
+  aceitar: {
+    titulo: "Responder ao pedido",
+    ajuda: "Avise a ETM que você viu o pedido e que a produção começou. A mensagem é opcional.",
+    placeholder: "Opcional. Ex.: Recebi o pedido e começo a produção hoje.",
+  },
+  entregar: {
+    titulo: "Entregar a versão",
+    ajuda: "Anexe o vídeo ou cole o link. Ao entregar, o pedido segue para a avaliação da ETM.",
+    placeholder: "Opcional: uma mensagem junto com a versão.",
+  },
+  aguardar: {
+    titulo: "Aguardando a avaliação da ETM",
+    ajuda: "A ETM está avaliando a última versão. Você ainda pode mandar uma mensagem.",
+    placeholder: "Escreva uma mensagem...",
+  },
+  enviar: {
+    titulo: "Envio final",
+    ajuda: "A ETM aprovou. Cole o link final (opcional) e marque o pedido como enviado.",
+    placeholder: "Opcional: uma mensagem final.",
+  },
+  encerrado: {
+    titulo: "Pedido encerrado",
+    ajuda: "Você ainda pode registrar uma mensagem.",
+    placeholder: "Escreva uma mensagem...",
+  },
+};
+
 export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId }: Props) {
   const router = useRouter();
   // o que foi digitado sobrevive a uma recarga da página (cada pedido e cada pessoa têm o seu rascunho)
@@ -51,14 +97,25 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
 
   const pct = progresso && progresso.bytes ? Math.round((progresso.feito / progresso.bytes) * 100) : 0;
   const aguardando = status === "em_avaliacao";
+  const fase = faseDe(status);
+  const t = TEXTOS[fase];
+
+  // do lado de quem produz, o link só faz sentido ao entregar ou ao enviar; os anexos, ao entregar ou comentar
+  const mostrarLink = modo === "igor" && (fase === "entregar" || fase === "enviar");
+  const mostrarAnexos = modo === "etm" || fase === "entregar" || fase === "aguardar" || fase === "encerrado";
 
   return (
     <div className="card space-y-4 p-5 sm:p-6">
       <h2 className="text-lg font-bold tracking-tight text-fg">
-        {modo === "etm" ? (aguardando ? "Avaliar a versão" : "Enviar mensagem") : "Responder e entregar"}
+        {modo === "etm" ? (aguardando ? "Avaliar a versão" : "Enviar mensagem") : t.titulo}
       </h2>
       {modo === "etm" && aguardando && (
         <p className="text-sm text-muted">Aprove o vídeo ou descreva o que precisa mudar. Pode anexar imagens de referência.</p>
+      )}
+      {modo === "igor" && (
+        <p className="text-sm text-muted">
+          {fase === "aceitar" && status === "correcao" ? "A ETM pediu correções. Avise que viu e que começou a refazer. A mensagem é opcional." : t.ajuda}
+        </p>
       )}
 
       {restaurado && texto && (
@@ -70,36 +127,44 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
       <textarea
         value={texto}
         onChange={(e) => atualizar({ texto: e.target.value })}
-        rows={4}
+        rows={fase === "aceitar" && modo === "igor" ? 3 : 4}
         maxLength={4000}
         disabled={ocupado}
         placeholder={
-          modo === "etm" && aguardando
-            ? "Ex.: aos 0:12 trocar a foto; o texto da abertura está com o nome errado."
-            : "Escreva uma mensagem..."
+          modo === "etm"
+            ? aguardando
+              ? "Ex.: aos 0:12 trocar a foto; o texto da abertura está com o nome errado."
+              : "Escreva uma mensagem..."
+            : t.placeholder
         }
         className="field resize-y"
       />
 
-      {modo === "igor" && (
+      {mostrarLink && (
         <input
           value={link}
           onChange={(e) => atualizar({ link: e.target.value })}
           type="url"
           disabled={ocupado}
-          placeholder="Link (opcional): YouTube vira player na página; Drive e outros ficam como link"
+          placeholder={
+            fase === "enviar"
+              ? "Link final (opcional)"
+              : "Link do vídeo (opcional se anexar o arquivo): YouTube vira player na página"
+          }
           className="field"
         />
       )}
 
-      <SeletorArquivos
-        limite={limite}
-        arquivos={arquivos}
-        onChange={setArquivos}
-        onErro={setErro}
-        disabled={ocupado}
-        rotulo={modo === "igor" ? "Anexar vídeo ou arquivos" : "Anexar arquivos"}
-      />
+      {mostrarAnexos && (
+        <SeletorArquivos
+          limite={limite}
+          arquivos={arquivos}
+          onChange={setArquivos}
+          onErro={setErro}
+          disabled={ocupado}
+          rotulo={modo === "igor" && fase === "entregar" ? "Anexar vídeo ou arquivos" : "Anexar arquivos"}
+        />
+      )}
 
       {ocupado && progresso && (
         <div className="rounded-lg bg-page px-4 py-3 text-sm">
@@ -144,48 +209,70 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
           </>
         ) : (
           <>
+            {fase === "aceitar" && (
+              <button
+                disabled={ocupado}
+                onClick={() => rodar(() => mudarStatus(pedidoId, "em_producao", texto, ""))}
+                className="btn-dark px-5 py-2.5"
+              >
+                {status === "correcao" ? "Iniciar correção" : "Iniciar produção"}
+              </button>
+            )}
+            {fase === "entregar" && (
+              <button
+                disabled={ocupado}
+                onClick={() => rodar((a) => entregarVersao(pedidoId, texto, link, a))}
+                className="btn-dark px-5 py-2.5"
+              >
+                Entregar versão para avaliação
+              </button>
+            )}
+            {fase === "enviar" && (
+              <button
+                disabled={ocupado}
+                onClick={() => rodar(() => mudarStatus(pedidoId, "enviado", texto, link))}
+                className="btn-dark px-5 py-2.5"
+              >
+                Marcar como enviado
+              </button>
+            )}
             <button
               disabled={ocupado}
               onClick={() => rodar((a) => comentarComoIgor(pedidoId, texto, a))}
-              className="btn-outline px-5 py-2.5"
+              className={fase === "aguardar" || fase === "encerrado" ? "btn-dark px-5 py-2.5" : "btn-outline px-5 py-2.5"}
             >
               Só comentar
-            </button>
-            <button
-              disabled={ocupado}
-              onClick={() => rodar((a) => entregarVersao(pedidoId, texto, link, a))}
-              className="btn-dark px-5 py-2.5"
-            >
-              Entregar versão para avaliação
             </button>
           </>
         )}
       </div>
 
       {modo === "igor" && (
-        <div className="space-y-3 border-t border-line pt-4">
-          <p className="text-sm font-semibold text-fg">Mudar status sem entregar</p>
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              value={novoStatus}
-              onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
-              disabled={ocupado}
-              className="field max-w-60"
-            >
-              {ORDEM_STATUS.map((s) => (
-                <option key={s} value={s}>{STATUS[s].rotulo.replace("Aguardando sua avaliação", "Aguardando avaliação")}</option>
-              ))}
-            </select>
-            <button
-              disabled={ocupado || novoStatus === status}
-              onClick={() => rodar(() => mudarStatus(pedidoId, novoStatus, texto, link))}
-              className="btn-outline px-5 py-2.5"
-            >
-              Aplicar
-            </button>
+        <details className="border-t border-line pt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-muted hover:text-fg">Outras opções (cancelar, reabrir...)</summary>
+          <div className="mt-3 space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <select
+                value={novoStatus}
+                onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
+                disabled={ocupado}
+                className="field max-w-60"
+              >
+                {ORDEM_STATUS.map((s) => (
+                  <option key={s} value={s}>{STATUS[s].rotulo.replace("Aguardando sua avaliação", "Aguardando avaliação")}</option>
+                ))}
+              </select>
+              <button
+                disabled={ocupado || novoStatus === status}
+                onClick={() => rodar(() => mudarStatus(pedidoId, novoStatus, texto, link))}
+                className="btn-outline px-5 py-2.5"
+              >
+                Aplicar
+              </button>
+            </div>
+            <p className="text-xs text-muted">Muda o status sem entregar nada. A mensagem digitada acima vai junto.</p>
           </div>
-          <p className="text-xs text-muted">A mensagem e o link acima vão junto com a mudança, por exemplo o link final ao marcar como enviado.</p>
-        </div>
+        </details>
       )}
     </div>
   );
