@@ -285,3 +285,34 @@ export function permissoesMensagem(
   const minha = e.autor_id === quem.id || (quem.admin && e.autor === "igor");
   return { editar: minha, excluir: minha || quem.admin };
 }
+
+/** Uma pergunta (ou mais) feita num trecho da linha de etapas: `etapa` é a etapa de onde o trecho sai (0 = Recebido). */
+export type MarcaDuvida = { etapa: number; estado: "aberta" | "respondida" };
+
+const ETAPA_DO_STATUS: Partial<Record<StatusPedido, number>> = {
+  recebido: 0,
+  em_producao: 1,
+  em_avaliacao: 2,
+  correcao: 2,
+  aprovado: 3,
+  enviado: 4,
+};
+
+/**
+ * Onde cada pergunta fica na linha de etapas: na etapa em que o pedido estava quando ela foi feita
+ * (lida do histórico, em ordem cronológica), e não onde o pedido está hoje. Assim a marca continua no
+ * mesmo trecho depois que o pedido avança. Se houver mais de uma no trecho, basta uma aberta para ele ficar "aberta".
+ */
+export function marcasDeDuvida(eventos: Evento[]): MarcaDuvida[] {
+  const respondidas = new Set(eventos.filter((e) => e.tipo === "resposta").map((e) => e.responde_a));
+  const porEtapa = new Map<number, MarcaDuvida["estado"]>();
+  let etapa = 0;
+  for (const e of eventos) {
+    if (e.status_novo && ETAPA_DO_STATUS[e.status_novo] !== undefined) etapa = ETAPA_DO_STATUS[e.status_novo] as number;
+    // na última etapa não há trecho depois dela
+    if (e.tipo === "duvida" && etapa < 4) {
+      if (porEtapa.get(etapa) !== "aberta") porEtapa.set(etapa, respondidas.has(e.id) ? "respondida" : "aberta");
+    }
+  }
+  return [...porEtapa].map(([et, estado]) => ({ etapa: et, estado }));
+}

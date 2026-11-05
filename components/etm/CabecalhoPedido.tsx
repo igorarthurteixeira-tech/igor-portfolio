@@ -1,13 +1,13 @@
-import type { Pedido } from "@/lib/etm";
+import type { MarcaDuvida, Pedido } from "@/lib/etm";
 import { SeloStatus } from "./DetalhePedido";
 import EtapasPedido from "./EtapasPedido";
 
 /**
  * Cartão com o número, o título, o status e as etapas do pedido. Fica sempre no topo e fixo ao rolar a página.
- * `bloqueado` marca o trecho da linha como parado quando há pergunta sem resposta.
+ * `marcas` mostram na linha as perguntas do pedido: em aberto (parada) ou respondidas (verde).
  * `topo` é a distância até as barras fixas do site (classe do Tailwind, escrita por inteiro em quem usa).
  */
-export default function CabecalhoPedido({ pedido, topo, bloqueado = false }: { pedido: Pedido; topo: string; bloqueado?: boolean }) {
+export default function CabecalhoPedido({ pedido, topo, marcas = [] }: { pedido: Pedido; topo: string; marcas?: MarcaDuvida[] }) {
   return (
     <div className={`sticky z-30 ${topo}`}>
       <div className="card px-4 py-3 shadow-lg shadow-slate-900/10 sm:px-6">
@@ -23,7 +23,7 @@ export default function CabecalhoPedido({ pedido, topo, bloqueado = false }: { p
           </span>
         </div>
         <div className="mt-2">
-          <EtapasPedido status={pedido.status} compacto bloqueado={bloqueado} />
+          <EtapasPedido status={pedido.status} compacto marcas={marcas} />
         </div>
       </div>
     </div>

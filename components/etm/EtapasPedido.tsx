@@ -1,4 +1,4 @@
-import type { StatusPedido } from "@/lib/etm";
+import type { MarcaDuvida, StatusPedido } from "@/lib/etm";
 
 const ETAPAS = ["Recebido", "Produção", "Avaliação", "Aprovado", "Enviado"] as const;
 
@@ -43,17 +43,18 @@ export function EtapasCompactas({ status }: { status: StatusPedido }) {
 
 /**
  * Linha do tempo de etapas. `compacto` reduz o tamanho, para o cabeçalho fixo do pedido.
- * `bloqueado` (há pergunta sem resposta) pinta de amarelo o trecho até a próxima etapa e põe um "?" no meio dele:
- * o pedido não avança enquanto a pergunta não for respondida.
+ * `marcas` são as perguntas do pedido, cada uma no trecho entre duas etapas:
+ * - em aberto: o traçado amarelo sai da etapa e PARA no círculo "?"; o resto do trecho fica apagado, porque o pedido não avança;
+ * - respondida: o círculo vira verde com um visto e o trecho inteiro fica verde. Fica como registro de que houve a pergunta.
  */
 export default function EtapasPedido({
   status,
   compacto = false,
-  bloqueado = false,
+  marcas = [],
 }: {
   status: StatusPedido;
   compacto?: boolean;
-  bloqueado?: boolean;
+  marcas?: MarcaDuvida[];
 }) {
   const atual = etapaAtual(status);
   if (atual < 0) {
@@ -61,36 +62,57 @@ export default function EtapasPedido({
   }
   const alerta = status === "em_avaliacao" || status === "correcao";
   const finalizado = status === "enviado";
-  const travado = bloqueado && !finalizado;
   const marca = compacto ? "h-5 w-5 text-[10px]" : "h-6 w-6 text-xs";
   const bolinha = compacto ? "h-6 w-6 text-[10px]" : "h-8 w-8 text-xs";
   const linha = compacto ? "top-3" : "top-4";
   const icone = compacto ? "h-3 w-3" : "h-4 w-4";
+  const iconeMarca = compacto ? "h-2.5 w-2.5" : "h-3 w-3";
 
   return (
     <ol className="flex items-start" aria-label="Etapas do pedido">
       {ETAPAS.map((nome, i) => {
         const feita = i < atual || finalizado;
         const aqui = i === atual && !finalizado;
-        const trecho = travado && i === atual + 1;
+        // o trecho que chega nesta etapa vem da anterior
+        const duvida = i > 0 ? marcas.find((m) => m.etapa === i - 1) : undefined;
+        const trechoPassou = i <= atual;
         return (
           <li key={nome} className="relative flex min-w-0 flex-1 flex-col items-center text-center">
-            {i > 0 && (
-              <span
-                aria-hidden
-                className={`absolute right-1/2 ${linha} h-0.5 w-full -translate-y-1/2 ${
-                  trecho ? "bg-amber-500" : i <= atual ? "bg-accent-strong" : "bg-slate-200"
-                }`}
-              />
-            )}
-            {trecho && (
+            {i > 0 &&
+              (duvida?.estado === "aberta" ? (
+                <>
+                  {/* metade que sai da etapa anterior: amarela, até a pergunta */}
+                  <span aria-hidden className={`absolute right-full ${linha} h-0.5 w-1/2 -translate-y-1/2 bg-amber-500`} />
+                  {/* metade depois da pergunta: não continua */}
+                  <span
+                    aria-hidden
+                    className={`absolute left-0 ${linha} h-0.5 w-1/2 -translate-y-1/2 ${trechoPassou ? "bg-accent-strong" : "bg-slate-200"}`}
+                  />
+                </>
+              ) : (
+                <span
+                  aria-hidden
+                  className={`absolute right-1/2 ${linha} h-0.5 w-full -translate-y-1/2 ${
+                    duvida?.estado === "respondida" ? "bg-emerald-500" : trechoPassou ? "bg-accent-strong" : "bg-slate-200"
+                  }`}
+                />
+              ))}
+            {duvida && (
               <span
                 role="img"
-                aria-label="Pedido parado: há uma pergunta sem resposta"
-                title="Há uma pergunta aguardando resposta"
-                className={`absolute left-0 ${linha} z-10 flex ${marca} -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-amber-500 font-bold text-white ring-4 ring-amber-200`}
+                aria-label={duvida.estado === "aberta" ? "Pedido parado: há uma pergunta sem resposta" : "Pergunta respondida"}
+                title={duvida.estado === "aberta" ? "Há uma pergunta aguardando resposta" : "Pergunta respondida"}
+                className={`absolute left-0 ${linha} z-10 flex ${marca} -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full font-bold text-white ring-4 ${
+                  duvida.estado === "aberta" ? "bg-amber-500 ring-amber-200" : "bg-emerald-500 ring-emerald-200"
+                }`}
               >
-                ?
+                {duvida.estado === "aberta" ? (
+                  "?"
+                ) : (
+                  <svg viewBox="0 0 24 24" className={iconeMarca} fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                )}
               </span>
             )}
             <span
