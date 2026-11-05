@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ORDEM_STATUS, STATUS, type ArquivoEnviado, type StatusPedido } from "@/lib/etm";
+import type { ArquivoEnviado, StatusPedido } from "@/lib/etm";
 import { useRascunho } from "@/lib/etm-rascunho";
 import { enviarArquivos, type ProgressoEnvio } from "@/lib/etm-upload";
 import { criarUploadUrlEtm, responderPedido } from "@/app/(site)/etm/actions";
@@ -43,7 +43,7 @@ const TEXTOS: Record<Fase, { titulo: string; ajuda: string; placeholder: string 
   },
   entregar: {
     titulo: "Entregar a versão",
-    ajuda: "Anexe o vídeo ou cole o link. Ao entregar, o pedido segue para a avaliação da ETM.",
+    ajuda: "Anexe o vídeo ou cole o link. Ao enviar, o pedido segue para a avaliação da ETM.",
     placeholder: "Opcional: uma mensagem junto com a versão.",
   },
   aguardar: {
@@ -69,7 +69,6 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
   const { valores, atualizar, restaurado, limpar } = useRascunho(`etm-acao:${usuarioId}:${pedidoId}`, { texto: "", link: "" });
   const { texto, link } = valores;
   const [arquivos, setArquivos] = useState<File[]>([]);
-  const [novoStatus, setNovoStatus] = useState<StatusPedido>(status === "recebido" ? "em_producao" : status);
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [progresso, setProgresso] = useState<ProgressoEnvio | null>(null);
@@ -93,6 +92,11 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
       setOcupado(false);
       setProgresso(null);
     }
+  }
+
+  function cancelar() {
+    if (!window.confirm("Cancelar este pedido? A ETM vai ver que ele foi cancelado.")) return;
+    rodar(() => mudarStatus(pedidoId, "cancelado", texto, ""));
   }
 
   const pct = progresso && progresso.bytes ? Math.round((progresso.feito / progresso.bytes) * 100) : 0;
@@ -224,7 +228,7 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
                 onClick={() => rodar((a) => entregarVersao(pedidoId, texto, link, a))}
                 className="btn-dark px-5 py-2.5"
               >
-                Entregar versão para avaliação
+                Enviar para avaliação
               </button>
             )}
             {fase === "enviar" && (
@@ -243,37 +247,18 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
             >
               Só comentar
             </button>
+            {fase !== "encerrado" && (
+              <button
+                disabled={ocupado}
+                onClick={cancelar}
+                className="rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 sm:ml-auto"
+              >
+                Cancelar pedido
+              </button>
+            )}
           </>
         )}
       </div>
-
-      {modo === "igor" && (
-        <details className="border-t border-line pt-4">
-          <summary className="cursor-pointer text-sm font-semibold text-muted hover:text-fg">Outras opções (cancelar, reabrir...)</summary>
-          <div className="mt-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={novoStatus}
-                onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
-                disabled={ocupado}
-                className="field max-w-60"
-              >
-                {ORDEM_STATUS.map((s) => (
-                  <option key={s} value={s}>{STATUS[s].rotulo.replace("Aguardando sua avaliação", "Aguardando avaliação")}</option>
-                ))}
-              </select>
-              <button
-                disabled={ocupado || novoStatus === status}
-                onClick={() => rodar(() => mudarStatus(pedidoId, novoStatus, texto, link))}
-                className="btn-outline px-5 py-2.5"
-              >
-                Aplicar
-              </button>
-            </div>
-            <p className="text-xs text-muted">Muda o status sem entregar nada. A mensagem digitada acima vai junto.</p>
-          </div>
-        </details>
-      )}
     </div>
   );
 }
