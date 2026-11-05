@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ehImagem, ehPdf, ehVideo } from "@/lib/etm";
+import { ehImagem, ehPdf, ehVideo, type ComentarioVideo } from "@/lib/etm";
 import PlayerVideo from "./PlayerVideo";
+import VideoComentavel from "./VideoComentavel";
+
+/** Dados dos comentários no tempo do vídeo, quando o arquivo é uma versão entregue. */
+export type Comentavel = {
+  arquivoId: string;
+  comentarios: ComentarioVideo[];
+  podeComentar: boolean;
+  podeResolver: boolean;
+  euId: string;
+  dica?: string;
+};
 
 /**
  * Abre um arquivo (imagem, vídeo ou PDF) numa janela por cima da própria página, sem sair dela nem abrir outra aba.
@@ -12,12 +23,15 @@ export default function AbrirArquivo({
   url,
   nome,
   urlBaixar,
+  comentavel,
   className,
   children,
 }: {
   url: string;
   nome: string;
   urlBaixar: string | null;
+  /** Com isto, o vídeo abre com a lista de comentários marcados no tempo. */
+  comentavel?: Comentavel;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -67,7 +81,7 @@ export default function AbrirArquivo({
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto" onMouseDown={(e) => e.target === e.currentTarget && setAberto(false)}>
+          <div className={`flex min-h-0 flex-1 justify-center overflow-auto ${ehVideo(nome) && comentavel ? "items-start" : "items-center"}`} onMouseDown={(e) => e.target === e.currentTarget && setAberto(false)}>
             {ehImagem(nome) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -78,14 +92,24 @@ export default function AbrirArquivo({
                 className="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl"
               />
             )}
-            {ehVideo(nome) && (
-              <PlayerVideo
-                src={url}
-                autoPlay
-                classe="shadow-2xl"
-                classeVideo="max-h-[calc(100dvh-7rem)] max-w-[calc(100vw-3rem)]"
-              />
-            )}
+            {ehVideo(nome) &&
+              (comentavel ? (
+                <div className="w-full max-w-4xl overflow-hidden rounded-xl shadow-2xl">
+                  <VideoComentavel
+                    src={url}
+                    autoPlay
+                    classeVideo="max-h-[calc(100dvh-18rem)] w-full"
+                    {...comentavel}
+                  />
+                </div>
+              ) : (
+                <PlayerVideo
+                  src={url}
+                  autoPlay
+                  classe="shadow-2xl"
+                  classeVideo="max-h-[calc(100dvh-7rem)] max-w-[calc(100vw-3rem)]"
+                />
+              ))}
             {ehPdf(nome) && <iframe src={url} title={nome} className="h-full w-full max-w-5xl rounded-lg bg-white shadow-2xl" />}
           </div>
         </div>

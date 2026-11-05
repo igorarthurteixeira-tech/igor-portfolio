@@ -384,10 +384,19 @@ export async function comentarNoVideo(arquivoId: string, segundo: number, texto:
 
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Serviço indisponível." };
-  const { data: arquivo } = await db.from("etm_arquivos").select("id,pedido_id,papel,nome").eq("id", arquivoId).maybeSingle();
+  const { data: arquivo } = await db.from("etm_arquivos").select("id,pedido_id,papel,nome,evento_id").eq("id", arquivoId).maybeSingle();
   if (!arquivo || arquivo.papel !== "entrega" || !ehVideo(String(arquivo.nome))) return { ok: false, erro: "Este arquivo não aceita comentários." };
   const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", arquivo.pedido_id).maybeSingle();
   if (pedido?.status !== "em_avaliacao") return { ok: false, erro: "Só dá para comentar enquanto a versão está em avaliação." };
+  const { data: ultima } = await db
+    .from("etm_eventos")
+    .select("id")
+    .eq("pedido_id", arquivo.pedido_id)
+    .eq("tipo", "entrega")
+    .order("criado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!ultima || arquivo.evento_id !== ultima.id) return { ok: false, erro: "Só a versão mais recente aceita comentários." };
 
   const { error } = await db.from("etm_comentarios_video").insert({
     pedido_id: arquivo.pedido_id,

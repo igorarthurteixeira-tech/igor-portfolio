@@ -17,6 +17,9 @@ type Props = {
   /** Pode marcar os pontos como feitos: quem produz. */
   podeResolver: boolean;
   euId: string;
+  /** Explica por que ainda não dá para comentar (aparece no lugar do botão). */
+  dica?: string;
+  autoPlay?: boolean;
 };
 
 /**
@@ -24,7 +27,7 @@ type Props = {
  * em que o vídeo está, os comentários aparecem como marcas na barra e cada horário leva o vídeo àquele momento.
  * Os comentários ainda não enviados viram a correção quando a ETM clica em "Pedir correção".
  */
-export default function VideoComentavel({ src, arquivoId, classeVideo, comentarios, podeComentar, podeResolver, euId }: Props) {
+export default function VideoComentavel({ src, arquivoId, classeVideo, comentarios, podeComentar, podeResolver, euId, dica, autoPlay }: Props) {
   const router = useRouter();
   const player = useRef<ControleDoPlayer>(null);
   const [novo, setNovo] = useState<number | null>(null);
@@ -74,6 +77,7 @@ export default function VideoComentavel({ src, arquivoId, classeVideo, comentari
       <PlayerVideo
         ref={player}
         src={src}
+        autoPlay={autoPlay}
         classeVideo={classeVideo}
         marcas={ordenados.map((c) => ({ segundo: c.segundo, feito: c.feito }))}
       />
@@ -90,6 +94,15 @@ export default function VideoComentavel({ src, arquivoId, classeVideo, comentari
             </svg>
             Comentar neste ponto do vídeo
           </button>
+        )}
+
+        {!podeComentar && dica && (
+          <p className="flex items-start gap-2 text-xs text-muted">
+            <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M4 5h16v11H9l-5 4V5z" />
+            </svg>
+            {dica}
+          </p>
         )}
 
         {novo !== null && (

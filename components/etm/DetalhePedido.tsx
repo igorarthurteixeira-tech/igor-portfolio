@@ -19,7 +19,7 @@ import {
   type Visao,
 } from "@/lib/etm";
 import type { ArquivoComUrl } from "@/lib/etm-servidor";
-import AbrirArquivo from "./AbrirArquivo";
+import AbrirArquivo, { type Comentavel } from "./AbrirArquivo";
 import { ImagemProtegida, VideoProtegido } from "./MidiaProtegida";
 import MensagemEditavel from "./MensagemEditavel";
 import VideoComentavel from "./VideoComentavel";
@@ -63,7 +63,14 @@ function LinkOuPlayer({ link, titulo }: { link: string; titulo: string }) {
 }
 
 /** O que a lista de arquivos precisa saber de quem olha e do pedido, para os comentários no vídeo. */
-type ContextoArquivos = { comentarios: ComentarioVideo[]; status: Pedido["status"]; visao: Visao; euId: string };
+type ContextoArquivos = {
+  comentarios: ComentarioVideo[];
+  status: Pedido["status"];
+  visao: Visao;
+  euId: string;
+  /** Evento da versão mais recente: só ela aceita comentários no vídeo. */
+  ultimaEntregaId: string | null;
+};
 
 function Arquivos({ itens, contexto }: { itens: ArquivoComUrl[]; contexto: ContextoArquivos }) {
   if (itens.length === 0) return null;
@@ -73,19 +80,28 @@ function Arquivos({ itens, contexto }: { itens: ArquivoComUrl[]; contexto: Conte
         const abre = !!a.url && (ehVideo(a.nome) || ehImagem(a.nome) || ehPdf(a.nome));
         // sem link de download = bloqueado (o que quem produz mandou só baixa depois da aprovação)
         const bloqueado = !!a.url && !a.urlBaixar;
+        // comentários no tempo do vídeo: só na versão mais recente entregue, e pela ETM enquanto ela está em avaliação
+        const ehUltimaVersao = a.papel === "entrega" && a.evento_id === contexto.ultimaEntregaId;
+        const podeComentar = contexto.visao === "etm" && contexto.status === "em_avaliacao" && ehUltimaVersao;
+        const comentavel: Comentavel | undefined =
+          a.papel === "entrega" && a.url && ehVideo(a.nome)
+            ? {
+                arquivoId: a.id,
+                comentarios: contexto.comentarios.filter((c) => c.arquivo_id === a.id),
+                podeComentar,
+                podeResolver: contexto.visao === "igor",
+                euId: contexto.euId,
+                dica:
+                  contexto.visao === "etm" && ehUltimaVersao && !podeComentar
+                    ? "Os comentários marcados no vídeo abrem quando esta versão estiver aguardando avaliação."
+                    : undefined,
+              }
+            : undefined;
         return (
           <li key={a.id} className="overflow-hidden rounded-xl border border-line bg-page">
             {a.url && ehVideo(a.nome) ? (
-              a.papel === "entrega" ? (
-                <VideoComentavel
-                  src={a.url}
-                  arquivoId={a.id}
-                  classeVideo="max-h-96 w-full bg-black"
-                  comentarios={contexto.comentarios.filter((c) => c.arquivo_id === a.id)}
-                  podeComentar={contexto.visao === "etm" && contexto.status === "em_avaliacao"}
-                  podeResolver={contexto.visao === "igor"}
-                  euId={contexto.euId}
-                />
+              comentavel ? (
+                <VideoComentavel src={a.url} classeVideo="max-h-96 w-full bg-black" {...comentavel} />
               ) : (
                 <VideoProtegido src={a.url} className="max-h-96 w-full bg-black" />
               )
@@ -99,7 +115,7 @@ function Arquivos({ itens, contexto }: { itens: ArquivoComUrl[]; contexto: Conte
               <span className="flex shrink-0 items-center gap-3 text-muted">
                 {tamanhoLegivel(a.tamanho)}
                 {abre && a.url && (
-                  <AbrirArquivo url={a.url} nome={a.nome} urlBaixar={a.urlBaixar} className="font-semibold text-accent-strong hover:underline">
+                  <AbrirArquivo url={a.url} nome={a.nome} urlBaixar={a.urlBaixar} comentavel={comentavel} className="font-semibold text-accent-strong hover:underline">
                     Abrir
                   </AbrirArquivo>
                 )}
@@ -211,7 +227,14 @@ export default function DetalhePedido({
   ];
 
   const abertas = new Set(perguntasAbertas(eventos).map((e) => e.id));
-  const contexto: ContextoArquivos = { comentarios, status: pedido.status, visao, euId: quem?.id ?? "" };
+  const ultimaEntrega = [...eventos].reverse().find((e) => e.tipo === "entrega");
+  const contexto: ContextoArquivos = {
+    comentarios,
+    status: pedido.status,
+    visao,
+    euId: quem?.id ?? "",
+    ultimaEntregaId: ultimaEntrega?.id ?? null,
+  };
   const pontosDaCorrecao = (id: string) => comentarios.filter((c) => c.correcao_evento_id === id);
 
   return (
