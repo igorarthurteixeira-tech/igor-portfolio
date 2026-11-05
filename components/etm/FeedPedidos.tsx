@@ -17,6 +17,7 @@ import { EtapasCompactas } from "./EtapasPedido";
 
 const BORDA: Record<StatusPedido, string> = {
   recebido: "border-l-slate-400",
+  aguardando_aceite: "border-l-sky-500",
   em_producao: "border-l-blue-500",
   em_avaliacao: "border-l-amber-500",
   correcao: "border-l-orange-500",

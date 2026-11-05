@@ -1,23 +1,13 @@
-import type { MarcaDuvida, StatusPedido } from "@/lib/etm";
+import { etapaDoStatus, type CobrancaStatus, type MarcaDuvida, type StatusPedido } from "@/lib/etm";
 
 const ETAPAS = ["Recebido", "Produção", "Avaliação", "Aprovado", "Enviado"] as const;
+// pedido com cobrança: ganha a etapa "Aceite" entre o recebimento e a produção
+const ETAPAS_COM_ACEITE = ["Recebido", "Aceite", "Produção", "Avaliação", "Aprovado", "Enviado"] as const;
 
-/** Em qual etapa o pedido está; a correção volta a ser uma avaliação em andamento. */
-function etapaAtual(status: StatusPedido): number {
-  switch (status) {
-    case "recebido": return 0;
-    case "em_producao": return 1;
-    case "em_avaliacao":
-    case "correcao": return 2;
-    case "aprovado": return 3;
-    case "enviado": return 4;
-    default: return -1;
-  }
-}
-
-/** Faixa fina de 5 segmentos, para a lista. */
+/** Faixa fina de segmentos, para a lista (sempre as 5 etapas; o aceite aparece como "Recebido" em âmbar). */
 export function EtapasCompactas({ status }: { status: StatusPedido }) {
-  const atual = etapaAtual(status);
+  const aceite = status === "aguardando_aceite";
+  const atual = aceite ? 0 : (etapaDoStatus(status, false) ?? -1);
   if (atual < 0) return null;
   return (
     <div className="flex gap-1" aria-label={`Etapa ${ETAPAS[atual]}`} role="img">
@@ -30,7 +20,7 @@ export function EtapasCompactas({ status }: { status: StatusPedido }) {
               : i === atual
                 ? status === "correcao"
                   ? "bg-orange-500"
-                  : status === "em_avaliacao"
+                  : status === "em_avaliacao" || aceite
                     ? "bg-amber-500"
                     : "bg-accent-strong"
                 : "bg-slate-200"
@@ -43,6 +33,7 @@ export function EtapasCompactas({ status }: { status: StatusPedido }) {
 
 /**
  * Linha do tempo de etapas. `compacto` reduz o tamanho, para o cabeçalho fixo do pedido.
+ * `cobranca` é a situação da cobrança do pedido: fora "nenhuma", aparece a etapa "Aceite".
  * `marcas` são as perguntas do pedido, cada uma no trecho entre duas etapas:
  * - em aberto: o traçado amarelo sai da etapa e PARA no círculo "?"; o resto do trecho fica apagado, porque o pedido não avança;
  * - respondida: o círculo vira verde com um visto e o traçado verde vai até ele. Também para ali, e só se liga à próxima
@@ -52,16 +43,26 @@ export default function EtapasPedido({
   status,
   compacto = false,
   marcas = [],
+  cobranca = "nenhuma",
 }: {
   status: StatusPedido;
   compacto?: boolean;
   marcas?: MarcaDuvida[];
+  cobranca?: CobrancaStatus;
 }) {
-  const atual = etapaAtual(status);
+  const comAceite = cobranca !== "nenhuma" || status === "aguardando_aceite";
+  const nomes: readonly string[] = comAceite ? ETAPAS_COM_ACEITE : ETAPAS;
+  let atual = etapaDoStatus(status, comAceite) ?? -1;
   if (atual < 0) {
     return <p className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">Este pedido foi cancelado.</p>;
   }
-  const alerta = status === "em_avaliacao" || status === "correcao";
+  // cobrança aceita e produção ainda não iniciada: o "Aceite" está concluído e a linha chega nele
+  const aceiteConcluido = comAceite && cobranca === "aceita" && status === "recebido";
+  if (aceiteConcluido) atual = 1;
+  // cobrança recusada: o pedido volta para "Recebido" e o "Aceite" aparece como recusado
+  const aceiteRecusado = comAceite && cobranca === "recusada" && status === "recebido";
+
+  const alerta = status === "em_avaliacao" || status === "correcao" || status === "aguardando_aceite";
   const finalizado = status === "enviado";
   const marca = compacto ? "h-5 w-5 text-[10px]" : "h-6 w-6 text-xs";
   const bolinha = compacto ? "h-6 w-6 text-[10px]" : "h-8 w-8 text-xs";
@@ -71,9 +72,10 @@ export default function EtapasPedido({
 
   return (
     <ol className="flex items-start" aria-label="Etapas do pedido">
-      {ETAPAS.map((nome, i) => {
-        const feita = i < atual || finalizado;
-        const aqui = i === atual && !finalizado;
+      {nomes.map((nome, i) => {
+        const recusado = aceiteRecusado && i === 1;
+        const feita = !recusado && (i < atual || finalizado || (aceiteConcluido && i === 1));
+        const aqui = !recusado && i === atual && !finalizado && !(aceiteConcluido && i === 1);
         // o trecho que chega nesta etapa vem da anterior
         const duvida = i > 0 ? marcas.find((m) => m.etapa === i - 1) : undefined;
         const trechoPassou = i <= atual;
@@ -121,16 +123,20 @@ export default function EtapasPedido({
             )}
             <span
               className={`relative z-10 flex ${bolinha} items-center justify-center rounded-full font-bold transition ${
-                feita
-                  ? "bg-accent-strong text-white"
-                  : aqui
-                    ? `${alerta ? (status === "correcao" ? "bg-orange-500" : "bg-amber-500") : "bg-accent-strong"} text-white ring-4 ${
-                        alerta ? (status === "correcao" ? "ring-orange-200" : "ring-amber-200") : "ring-accent-strong/20"
-                      }`
-                    : "border-2 border-slate-200 bg-white text-slate-400"
+                recusado
+                  ? "bg-red-500 text-white ring-4 ring-red-200"
+                  : feita
+                    ? "bg-accent-strong text-white"
+                    : aqui
+                      ? `${alerta ? (status === "correcao" ? "bg-orange-500" : "bg-amber-500") : "bg-accent-strong"} text-white ring-4 ${
+                          alerta ? (status === "correcao" ? "ring-orange-200" : "ring-amber-200") : "ring-accent-strong/20"
+                        }`
+                      : "border-2 border-slate-200 bg-white text-slate-400"
               }`}
             >
-              {feita ? (
+              {recusado ? (
+                "!"
+              ) : feita ? (
                 <svg viewBox="0 0 24 24" className={icone} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M5 12.5l4.5 4.5L19 7.5" />
                 </svg>
@@ -139,9 +145,11 @@ export default function EtapasPedido({
               )}
             </span>
             <span
-              className={`${compacto ? "mt-1 text-[10px]" : "mt-2 text-[11px] sm:text-xs"} font-semibold ${aqui ? "text-fg" : feita ? "text-slate-600" : "text-slate-400"}`}
+              className={`${compacto ? "mt-1 text-[10px]" : "mt-2 text-[11px] sm:text-xs"} font-semibold ${
+                recusado ? "text-red-600" : aqui ? "text-fg" : feita ? "text-slate-600" : "text-slate-400"
+              }`}
             >
-              {aqui && status === "correcao" ? "Em correção" : nome}
+              {recusado ? "Recusado" : aqui && status === "correcao" ? "Em correção" : nome}
             </span>
           </li>
         );

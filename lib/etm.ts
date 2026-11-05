@@ -40,10 +40,15 @@ export function normalizarTipo(s: string) {
 /** Chave para saber se dois nomes de tipo são o mesmo (ignora maiúsculas e acentos). */
 export const chaveTipo = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-export type StatusPedido = "recebido" | "em_producao" | "em_avaliacao" | "correcao" | "aprovado" | "enviado" | "cancelado";
+export type StatusPedido = "recebido" | "aguardando_aceite" | "em_producao" | "em_avaliacao" | "correcao" | "aprovado" | "enviado" | "cancelado";
 
 export const STATUS: Record<StatusPedido, { rotulo: string; dica: string; cor: string }> = {
   recebido: { rotulo: "Recebido", dica: "Aguardando o início da produção.", cor: "bg-slate-100 text-slate-700" },
+  aguardando_aceite: {
+    rotulo: "Aguardando seu aceite",
+    dica: "Há uma cobrança para você aceitar antes de a produção começar.",
+    cor: "bg-sky-100 text-sky-800",
+  },
   em_producao: { rotulo: "Em produção", dica: "O vídeo está sendo feito.", cor: "bg-blue-100 text-blue-800" },
   em_avaliacao: { rotulo: "Aguardando sua avaliação", dica: "Há uma versão pronta para ser avaliada.", cor: "bg-amber-100 text-amber-800" },
   correcao: { rotulo: "Em correção", dica: "Os ajustes pedidos estão sendo feitos.", cor: "bg-orange-100 text-orange-800" },
@@ -53,6 +58,9 @@ export const STATUS: Record<StatusPedido, { rotulo: string; dica: string; cor: s
 };
 
 export const ORDEM_STATUS = Object.keys(STATUS) as StatusPedido[];
+
+/** Situação da cobrança do pedido: nenhuma, proposta (aguarda aceite), aceita ou recusada. */
+export type CobrancaStatus = "nenhuma" | "proposta" | "aceita" | "recusada";
 
 export type Pedido = {
   id: string;
@@ -66,6 +74,11 @@ export type Pedido = {
   urgente: boolean;
   link_material: string | null;
   status: StatusPedido;
+  /** Valor combinado, cobrado só ao final do vídeo; vazio quando o pedido não gera cobrança. */
+  valor_cobranca: number | null;
+  cobranca_status: CobrancaStatus;
+  cobranca_aceita_em: string | null;
+  cobranca_aceita_por: string | null;
   criado_em: string;
   atualizado_em: string;
 };
@@ -75,8 +88,10 @@ export type Evento = {
   pedido_id: string;
   autor: "etm" | "igor";
   autor_nome: string;
-  tipo: "criado" | "comentario" | "status" | "entrega" | "correcao" | "aprovacao" | "duvida" | "resposta";
+  tipo: "criado" | "comentario" | "status" | "entrega" | "correcao" | "aprovacao" | "duvida" | "resposta" | "cobranca" | "aceite" | "recusa";
   texto: string;
+  /** Valor da cobrança, nos eventos de cobrança, aceite e recusa. */
+  valor: number | null;
   status_novo: StatusPedido | null;
   versao: number | null;
   link: string | null;
@@ -166,6 +181,9 @@ export const ROTULO_EVENTO: Record<Evento["tipo"], string> = {
   aprovacao: "Vídeo aprovado",
   duvida: "Pergunta",
   resposta: "Resposta",
+  cobranca: "Cobrança proposta",
+  aceite: "Cobrança aceita",
+  recusa: "Cobrança recusada",
 };
 
 /** Perguntas que ainda não têm resposta (a resposta aponta para a pergunta em `responde_a`). */
@@ -290,28 +308,37 @@ export function permissoesMensagem(
 /** Uma pergunta (ou mais) feita num trecho da linha de etapas: `etapa` é a etapa de onde o trecho sai (0 = Recebido). */
 export type MarcaDuvida = { etapa: number; estado: "aberta" | "respondida" };
 
-const ETAPA_DO_STATUS: Partial<Record<StatusPedido, number>> = {
-  recebido: 0,
-  em_producao: 1,
-  em_avaliacao: 2,
-  correcao: 2,
-  aprovado: 3,
-  enviado: 4,
-};
+/**
+ * Posição do status na linha de etapas. Pedido com cobrança ganha a etapa "Aceite" depois de "Recebido":
+ * tudo que vem depois dela anda uma casa (e "aguardando_aceite" é a própria etapa, que só existe nesse caso).
+ */
+export function etapaDoStatus(status: StatusPedido, comAceite: boolean): number | undefined {
+  if (status === "aguardando_aceite") return 1;
+  const base: Partial<Record<StatusPedido, number>> = { recebido: 0, em_producao: 1, em_avaliacao: 2, correcao: 2, aprovado: 3, enviado: 4 };
+  const i = base[status];
+  if (i === undefined) return undefined;
+  return comAceite && i >= 1 ? i + 1 : i;
+}
+
+/** O pedido mostra a etapa "Aceite" quando tem (ou teve) uma cobrança. */
+export const temAceite = (p: Pick<Pedido, "cobranca_status" | "status">) => p.cobranca_status !== "nenhuma" || p.status === "aguardando_aceite";
 
 /**
  * Onde cada pergunta fica na linha de etapas: na etapa em que o pedido estava quando ela foi feita
  * (lida do histórico, em ordem cronológica), e não onde o pedido está hoje. Assim a marca continua no
  * mesmo trecho depois que o pedido avança. Se houver mais de uma no trecho, basta uma aberta para ele ficar "aberta".
  */
-export function marcasDeDuvida(eventos: Evento[]): MarcaDuvida[] {
+export function marcasDeDuvida(eventos: Evento[], comAceite = false): MarcaDuvida[] {
   const respondidas = new Set(eventos.filter((e) => e.tipo === "resposta").map((e) => e.responde_a));
   const porEtapa = new Map<number, MarcaDuvida["estado"]>();
   let etapa = 0;
   for (const e of eventos) {
-    if (e.status_novo && ETAPA_DO_STATUS[e.status_novo] !== undefined) etapa = ETAPA_DO_STATUS[e.status_novo] as number;
+    const posicao = e.status_novo ? etapaDoStatus(e.status_novo, comAceite) : undefined;
+    if (posicao !== undefined) etapa = posicao;
+    // o aceite devolve o pedido a "Recebido", mas na linha de etapas ele já passou pelo "Aceite"
+    if (e.tipo === "aceite" && comAceite) etapa = 1;
     // na última etapa não há trecho depois dela
-    if (e.tipo === "duvida" && etapa < 4) {
+    if (e.tipo === "duvida" && etapa < (comAceite ? 5 : 4)) {
       if (porEtapa.get(etapa) !== "aberta") porEtapa.set(etapa, respondidas.has(e.id) ? "respondida" : "aberta");
     }
   }
@@ -324,11 +351,13 @@ export type Visao = "etm" | "igor";
 export function rotuloStatus(status: StatusPedido, visao: Visao = "etm") {
   // quem avalia é o cliente: para o painel, o pedido "aguarda a avaliação do cliente", e não a sua
   if (visao === "igor" && status === "em_avaliacao") return "Aguardando avaliação do cliente";
+  if (visao === "igor" && status === "aguardando_aceite") return "Aguardando aceite do cliente";
   return STATUS[status].rotulo;
 }
 
 export function dicaStatus(status: StatusPedido, visao: Visao = "etm") {
   if (visao === "igor" && status === "em_avaliacao") return "A versão foi entregue e aguarda a avaliação do cliente.";
+  if (visao === "igor" && status === "aguardando_aceite") return "A cobrança foi enviada e a produção só começa depois do aceite do cliente.";
   return STATUS[status].dica;
 }
 
@@ -356,4 +385,15 @@ export function tempoDeVideo(s: number) {
   const m = Math.floor((t % 3600) / 60);
   const seg = String(Math.floor(t % 60)).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${seg}` : `${m}:${seg}`;
+}
+
+/** "R$ 1.234,50". */
+export const formatarValor = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+/** Lê um valor digitado no formato brasileiro ("500", "500,50", "1.234,50", "R$ 500"); NaN se não for número. */
+export function paraNumeroBR(texto: string) {
+  let t = texto.replace(/[^\d.,]/g, "");
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ""); // "1.234" e "1.234.567" são milhares
+  return Number(t);
 }

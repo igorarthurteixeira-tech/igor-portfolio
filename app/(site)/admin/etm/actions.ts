@@ -134,6 +134,13 @@ export async function mudarStatus(
 
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Supabase não configurado." };
+  // com cobrança, a produção só começa depois do aceite do cliente
+  if (status === "em_producao") {
+    const { data: pedido } = await db.from("etm_pedidos").select("valor_cobranca,cobranca_status").eq("id", pedidoId).maybeSingle();
+    if (pedido?.valor_cobranca != null && pedido.cobranca_status !== "aceita") {
+      return { ok: false, erro: "A cobrança precisa ser aceita pelo cliente antes de iniciar a produção." };
+    }
+  }
   await criarEvento(db, {
     pedido_id: pedidoId,
     autor: "igor",
@@ -257,5 +264,87 @@ export async function alternarComentarioFeito(id: string, feito: boolean): Promi
   if (!db) return { ok: false, erro: "Supabase não configurado." };
   const { data } = await db.from("etm_comentarios_video").update({ feito }).eq("id", id).select("pedido_id").maybeSingle();
   if (data) atualizarTelas(data.pedido_id as string);
+  return { ok: true };
+}
+
+// ---- cobrança ----
+
+/** Marca que o vídeo gera cobrança e envia o valor para o aceite do cliente. Só antes de a produção começar. */
+export async function proporCobranca(pedidoId: string, valor: number, texto: string): Promise<Resultado> {
+  const admin = await getAdminUser();
+  if (!admin) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };
+  const v = Math.round(Number(valor) * 100) / 100;
+  if (!(v > 0 && v <= 1_000_000)) return { ok: false, erro: "Informe um valor entre R$ 0,01 e R$ 1.000.000,00." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", pedidoId).maybeSingle();
+  if (pedido?.status !== "recebido") return { ok: false, erro: "A cobrança só pode ser enviada antes de a produção começar." };
+
+  await criarEvento(db, {
+    pedido_id: pedidoId,
+    autor: "igor",
+    autor_nome: NOME_ADMIN,
+    autor_id: admin.id,
+    tipo: "cobranca",
+    texto: limpar(texto, 1000),
+    status_novo: "aguardando_aceite",
+    valor: v,
+  });
+  await atualizarPedido(db, pedidoId, {
+    status: "aguardando_aceite",
+    valor_cobranca: v,
+    cobranca_status: "proposta",
+    cobranca_aceita_em: null,
+    cobranca_aceita_por: null,
+  });
+  atualizarTelas(pedidoId);
+  return { ok: true };
+}
+
+/** Desiste da cobrança enviada (ainda sem aceite): o pedido volta a "Recebido", sem cobrança. */
+export async function retirarCobranca(pedidoId: string): Promise<Resultado> {
+  const admin = await getAdminUser();
+  if (!admin) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", pedidoId).maybeSingle();
+  if (pedido?.status !== "aguardando_aceite") return { ok: false, erro: "Não há cobrança aguardando aceite." };
+  await criarEvento(db, {
+    pedido_id: pedidoId,
+    autor: "igor",
+    autor_nome: NOME_ADMIN,
+    autor_id: admin.id,
+    tipo: "status",
+    texto: "Cobrança retirada.",
+    status_novo: "recebido",
+  });
+  await atualizarPedido(db, pedidoId, { status: "recebido", valor_cobranca: null, cobranca_status: "nenhuma" });
+  atualizarTelas(pedidoId);
+  return { ok: true };
+}
+
+/** Inicia a produção sem cobrança (o pedido não tinha, ou o cliente recusou e a cobrança foi abandonada). */
+export async function iniciarSemCobranca(pedidoId: string, texto: string): Promise<Resultado> {
+  const admin = await getAdminUser();
+  if (!admin) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  const { data: pedido } = await db.from("etm_pedidos").select("status,cobranca_status").eq("id", pedidoId).maybeSingle();
+  if (pedido?.status !== "recebido") return { ok: false, erro: "O pedido já saiu da fase de recebimento." };
+  const aviso = pedido.cobranca_status === "recusada" ? "Produção iniciada sem cobrança." : "";
+  await criarEvento(db, {
+    pedido_id: pedidoId,
+    autor: "igor",
+    autor_nome: NOME_ADMIN,
+    autor_id: admin.id,
+    tipo: "status",
+    texto: [aviso, limpar(texto, 4000)].filter(Boolean).join(" "),
+    status_novo: "em_producao",
+  });
+  await atualizarPedido(db, pedidoId, { status: "em_producao", valor_cobranca: null, cobranca_status: "nenhuma" });
+  atualizarTelas(pedidoId);
   return { ok: true };
 }

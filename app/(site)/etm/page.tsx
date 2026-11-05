@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { contarGrupos, lerFiltros, type Pedido, type StatusPedido } from "@/lib/etm";
+import { lerFiltros, type Pedido, type StatusPedido } from "@/lib/etm";
 import { carregarResumos, getEtmUser } from "@/lib/etm-servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import FeedFiltravel from "@/components/etm/FeedFiltravel";
@@ -8,8 +8,8 @@ import HeroEtm from "@/components/etm/HeroEtm";
 
 export const dynamic = "force-dynamic";
 
-/** Para a ETM, o que espera ação é a versão aguardando avaliação. */
-const ACAO: StatusPedido[] = ["em_avaliacao"];
+/** Para a ETM, espera ação a versão aguardando avaliação e a cobrança aguardando aceite. */
+const ACAO: StatusPedido[] = ["em_avaliacao", "aguardando_aceite"];
 
 export default async function EtmPage({
   searchParams,
@@ -25,7 +25,8 @@ export default async function EtmPage({
     ? await db.from("etm_pedidos").select("*").order("criado_em", { ascending: false }).limit(200)
     : { data: [] };
   const pedidos = (data ?? []) as Pedido[];
-  const contagens = contarGrupos(pedidos, ACAO);
+  const aceites = pedidos.filter((p) => p.status === "aguardando_aceite").length;
+  const avaliacoes = pedidos.filter((p) => p.status === "em_avaliacao").length;
   // os resumos de todos os cartões vêm junto: o filtro roda no navegador e não volta ao servidor
   const resumos = db ? Object.fromEntries(await carregarResumos(db, pedidos.map((p) => p.id))) : {};
   const comPergunta = Object.values(resumos).filter((r) => r.perguntasAbertas > 0).length;
@@ -53,15 +54,26 @@ export default async function EtmPage({
           </div>
         )}
 
-        {contagens.acao > 0 && (
+        {aceites > 0 && (
+          <div className="card flex items-center gap-3 border-2 border-sky-400 bg-sky-50 px-5 py-4">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-600 text-sm font-bold text-white">{aceites}</span>
+            <p className="text-sm font-semibold text-sky-900">
+              {aceites === 1
+                ? "1 pedido tem uma cobrança esperando o seu aceite para a produção começar."
+                : `${aceites} pedidos têm cobrança esperando o seu aceite para a produção começar.`}
+            </p>
+          </div>
+        )}
+
+        {avaliacoes > 0 && (
           <div className="card flex items-center gap-3 border-amber-300 bg-amber-50 px-5 py-4">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-sm font-bold text-white">
-              {contagens.acao}
+              {avaliacoes}
             </span>
             <p className="text-sm font-medium text-amber-900">
-              {contagens.acao === 1
+              {avaliacoes === 1
                 ? "Há 1 vídeo pronto esperando a sua avaliação."
-                : `Há ${contagens.acao} vídeos prontos esperando a sua avaliação.`}
+                : `Há ${avaliacoes} vídeos prontos esperando a sua avaliação.`}
             </p>
           </div>
         )}
@@ -72,7 +84,7 @@ export default async function EtmPage({
           resumos={resumos}
           base="/etm"
           precisaAcao={ACAO}
-          rotuloAcao="Aguardando avaliação"
+          rotuloAcao="Precisam de você"
           inicial={filtros}
           vazioSemFiltro="Nenhum pedido ainda. Clique em Novo pedido para começar."
         />

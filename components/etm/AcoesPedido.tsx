@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ArquivoEnviado, StatusPedido } from "@/lib/etm";
+import { dataHora, formatarValor, paraNumeroBR, type ArquivoEnviado, type CobrancaStatus, type StatusPedido } from "@/lib/etm";
 import { useRascunho } from "@/lib/etm-rascunho";
 import { enviarArquivos, type ProgressoEnvio } from "@/lib/etm-upload";
 import { criarUploadUrlEtm, responderPedido } from "@/app/(site)/etm/actions";
@@ -11,7 +11,10 @@ import {
   criarUploadUrlAdminEtm,
   entregarVersao,
   fazerPergunta,
+  iniciarSemCobranca,
   mudarStatus,
+  proporCobranca,
+  retirarCobranca,
 } from "@/app/(site)/admin/etm/actions";
 import SeletorArquivos from "./SeletorArquivos";
 
@@ -23,6 +26,8 @@ type Props = {
   usuarioId: string;
   /** Comentários marcados no vídeo que ainda não foram enviados (a ETM, ao avaliar). */
   notasPendentes?: number;
+  /** Situação da cobrança do pedido (visão de quem produz). */
+  cobranca?: { status: CobrancaStatus; valor: number | null; aceitaPor: string | null; aceitaEm: string | null };
 };
 type Resp = { ok: true } | { ok: false; erro: string };
 
@@ -34,9 +39,10 @@ type Resp = { ok: true } | { ok: false; erro: string };
  * - enviar: a ETM aprovou; falta o envio final;
  * - encerrado: enviado ou cancelado.
  */
-type Fase = "aceitar" | "entregar" | "aguardar" | "enviar" | "encerrado";
+type Fase = "aceitar" | "aceite" | "entregar" | "aguardar" | "enviar" | "encerrado";
 
 function faseDe(status: StatusPedido): Fase {
+  if (status === "aguardando_aceite") return "aceite";
   if (status === "recebido" || status === "correcao") return "aceitar";
   if (status === "em_producao") return "entregar";
   if (status === "em_avaliacao") return "aguardar";
@@ -49,6 +55,11 @@ const TEXTOS: Record<Fase, { titulo: string; ajuda: string; placeholder: string 
     titulo: "Responder ao pedido",
     ajuda: "Avise a ETM que você viu o pedido e que a produção começou (a mensagem é opcional), ou tire uma dúvida: a pergunta aparece em destaque para a ETM responder.",
     placeholder: "Opcional. Ex.: Recebi o pedido e começo a produção hoje.",
+  },
+  aceite: {
+    titulo: "Aguardando o aceite da cobrança",
+    ajuda: "O cliente precisa aceitar a cobrança antes de a produção começar. Ela só será feita ao final do vídeo.",
+    placeholder: "Escreva uma mensagem...",
   },
   entregar: {
     titulo: "Entregar a versão",
@@ -72,12 +83,15 @@ const TEXTOS: Record<Fase, { titulo: string; ajuda: string; placeholder: string 
   },
 };
 
-export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId, notasPendentes = 0 }: Props) {
+export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId, notasPendentes = 0, cobranca }: Props) {
   const router = useRouter();
   // o que foi digitado sobrevive a uma recarga da página (cada pedido e cada pessoa têm o seu rascunho)
   const { valores, atualizar, restaurado, limpar } = useRascunho(`etm-acao:${usuarioId}:${pedidoId}`, { texto: "", link: "" });
   const { texto, link } = valores;
   const [arquivos, setArquivos] = useState<File[]>([]);
+  // cobrança do pedido (só na fase de recebimento): marcar que gera cobrança e informar o valor
+  const [geraCobranca, setGeraCobranca] = useState(cobranca?.status === "recusada");
+  const [valorTexto, setValorTexto] = useState(cobranca?.valor != null ? String(cobranca.valor).replace(".", ",") : "");
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [progresso, setProgresso] = useState<ProgressoEnvio | null>(null);
@@ -115,7 +129,15 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId,
 
   // do lado de quem produz, o link só faz sentido ao entregar ou ao enviar; os anexos, ao entregar ou comentar
   const mostrarLink = modo === "igor" && (fase === "entregar" || fase === "enviar");
-  const mostrarAnexos = modo === "etm" || fase === "entregar" || fase === "aguardar" || fase === "encerrado";
+  const mostrarAnexos = modo === "etm" || fase === "entregar" || fase === "aguardar" || fase === "aceite" || fase === "encerrado";
+  const naRecepcao = modo === "igor" && status === "recebido";
+  const cobrancaAceita = naRecepcao && cobranca?.status === "aceita";
+  const valorDigitado = paraNumeroBR(valorTexto);
+
+  function enviarCobranca() {
+    if (!(valorDigitado > 0)) return setErro("Informe o valor da cobrança.");
+    rodar(() => proporCobranca(pedidoId, valorDigitado, texto));
+  }
 
   return (
     <div className="card space-y-4 p-5 sm:p-6">
@@ -140,6 +162,50 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId,
       {modo === "igor" && (
         <p className="text-sm text-muted">
           {fase === "aceitar" && status === "correcao" ? "A ETM pediu correções. Avise que viu e que começou a refazer. A mensagem é opcional." : t.ajuda}
+        </p>
+      )}
+
+      {naRecepcao && !cobrancaAceita && (
+        <div className="space-y-3 rounded-xl border border-line bg-page p-4">
+          {cobranca?.status === "recusada" && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              O cliente recusou a cobrança{cobranca.valor != null ? ` de ${formatarValor(cobranca.valor)}` : ""}. Ajuste o valor e reenvie, ou inicie a produção sem cobrança.
+            </p>
+          )}
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-fg">
+            <input
+              type="checkbox"
+              checked={geraCobranca}
+              onChange={(e) => setGeraCobranca(e.target.checked)}
+              disabled={ocupado}
+              className="h-4 w-4 accent-accent-strong"
+            />
+            Este vídeo gera cobrança
+          </label>
+          {geraCobranca && (
+            <div className="space-y-1.5">
+              <label htmlFor="valor-cobranca" className="block text-sm font-semibold text-fg">Valor (R$)</label>
+              <input
+                id="valor-cobranca"
+                inputMode="decimal"
+                value={valorTexto}
+                onChange={(e) => setValorTexto(e.target.value)}
+                disabled={ocupado}
+                placeholder="Ex.: 500,00"
+                className="field max-w-48"
+              />
+              <p className="text-xs text-muted">
+                O cliente verá o valor e precisará aceitar antes de a produção começar. Fica avisado de que a cobrança só será feita ao final do vídeo.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {cobrancaAceita && cobranca && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+          Cobrança de {formatarValor(cobranca.valor ?? 0)} aceita{cobranca.aceitaPor ? ` por ${cobranca.aceitaPor}` : ""}
+          {cobranca.aceitaEm ? ` em ${dataHora(cobranca.aceitaEm)}` : ""}. Já pode iniciar a produção; a cobrança só é feita ao final.
         </p>
       )}
 
@@ -234,13 +300,32 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId,
           </>
         ) : (
           <>
-            {fase === "aceitar" && (
+            {fase === "aceitar" && naRecepcao && geraCobranca && !cobrancaAceita && (
+              <button disabled={ocupado} onClick={enviarCobranca} className="btn-dark px-5 py-2.5">
+                Enviar cobrança para aceite
+              </button>
+            )}
+            {fase === "aceitar" && naRecepcao && !geraCobranca && cobranca?.status === "recusada" && (
+              <button disabled={ocupado} onClick={() => rodar(() => iniciarSemCobranca(pedidoId, texto))} className="btn-dark px-5 py-2.5">
+                Iniciar produção sem cobrança
+              </button>
+            )}
+            {fase === "aceitar" && !(naRecepcao && (geraCobranca || cobranca?.status === "recusada") && !cobrancaAceita) && (
               <button
                 disabled={ocupado}
                 onClick={() => rodar(() => mudarStatus(pedidoId, "em_producao", texto, ""))}
                 className="btn-dark px-5 py-2.5"
               >
                 {status === "correcao" ? "Iniciar correção" : "Iniciar produção"}
+              </button>
+            )}
+            {fase === "aceite" && (
+              <button
+                disabled={ocupado}
+                onClick={() => window.confirm("Retirar a cobrança? O pedido volta a Recebido, sem cobrança.") && rodar(() => retirarCobranca(pedidoId))}
+                className="btn-outline px-5 py-2.5"
+              >
+                Retirar cobrança
               </button>
             )}
             {fase === "entregar" && (
@@ -273,7 +358,7 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId,
             <button
               disabled={ocupado}
               onClick={() => rodar((a) => comentarComoIgor(pedidoId, texto, a))}
-              className={fase === "aguardar" || fase === "encerrado" ? "btn-dark px-5 py-2.5" : "btn-outline px-5 py-2.5"}
+              className={fase === "aguardar" || fase === "aceite" || fase === "encerrado" ? "btn-dark px-5 py-2.5" : "btn-outline px-5 py-2.5"}
             >
               Só comentar
             </button>

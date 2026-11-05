@@ -438,3 +438,43 @@ export async function excluirComentarioVideo(id: string): Promise<Resultado> {
   atualizarTelasDoVideo(pedidoId);
   return { ok: true };
 }
+
+// ---- cobrança ----
+
+/**
+ * A ETM aceita ou recusa a cobrança do pedido. O aceite fica registrado (quem, quando e o valor) e libera quem produz
+ * para iniciar; a cobrança em si só é feita ao final do vídeo.
+ */
+export async function responderCobranca(pedidoId: string, aceita: boolean, motivo: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+
+  const { data: pedido } = await db.from("etm_pedidos").select("status,valor_cobranca").eq("id", pedidoId).maybeSingle();
+  if (pedido?.status !== "aguardando_aceite" || pedido.valor_cobranca == null) {
+    return { ok: false, erro: "Não há cobrança aguardando o seu aceite." };
+  }
+  const valor = Number(pedido.valor_cobranca);
+
+  await criarEvento(db, {
+    pedido_id: pedidoId,
+    autor: "etm",
+    autor_nome: user.nome,
+    autor_id: user.id,
+    tipo: aceita ? "aceite" : "recusa",
+    texto: aceita ? "" : limpar(motivo, 1000),
+    status_novo: "recebido",
+    valor,
+  });
+  await atualizarPedido(
+    db,
+    pedidoId,
+    aceita
+      ? { status: "recebido", cobranca_status: "aceita", cobranca_aceita_em: new Date().toISOString(), cobranca_aceita_por: user.nome }
+      : { status: "recebido", cobranca_status: "recusada" },
+  );
+  atualizarTelasDoPedido(pedidoId);
+  return { ok: true };
+}

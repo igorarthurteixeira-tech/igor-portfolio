@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { carregarDetalhe, limiteDeEnvio } from "@/lib/etm-servidor";
-import { marcasDeDuvida } from "@/lib/etm";
+import { marcasDeDuvida, temAceite } from "@/lib/etm";
 import CabecalhoPedido from "@/components/etm/CabecalhoPedido";
 import DetalhePedido from "@/components/etm/DetalhePedido";
 import AcoesPedido from "@/components/etm/AcoesPedido";
@@ -26,8 +26,14 @@ export default async function AdminPedidoEtmPage({ params }: { params: Promise<{
           <Link href="/admin/etm" className="text-sm font-medium text-muted hover:text-fg">← Voltar aos pedidos</Link>
           <ExcluirPedido id={id} />
         </div>
-        <CabecalhoPedido pedido={detalhe.pedido} topo="top-32" visao="igor" marcas={marcasDeDuvida(detalhe.eventos)} />
-        <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="igor" limite={limite} usuarioId={user.id} />
+        <CabecalhoPedido pedido={detalhe.pedido} topo="top-32" visao="igor" marcas={marcasDeDuvida(detalhe.eventos, temAceite(detalhe.pedido))} />
+        <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="igor" limite={limite} usuarioId={user.id} cobranca={{
+            status: detalhe.pedido.cobranca_status,
+            valor: detalhe.pedido.valor_cobranca != null ? Number(detalhe.pedido.valor_cobranca) : null,
+            aceitaPor: detalhe.pedido.cobranca_aceita_por,
+            aceitaEm: detalhe.pedido.cobranca_aceita_em,
+          }}
+        />
         <DetalhePedido {...detalhe} visao="igor" quem={{ id: user.id, admin: true }} />
       </div>
     </section>

@@ -2,6 +2,7 @@ import {
   STATUS,
   dataCurtaIso,
   dicaStatus,
+  formatarValor,
   rotuloStatus,
   tempoDeVideo,
   dataHora,
@@ -143,6 +144,9 @@ function titulo(e: Evento) {
     case "aprovacao": return "Vídeo aprovado";
     case "duvida": return "Pergunta";
     case "resposta": return "Resposta";
+    case "cobranca": return `Cobrança de ${formatarValor(e.valor ?? 0)} enviada para aceite`;
+    case "aceite": return `Cobrança de ${formatarValor(e.valor ?? 0)} aceita`;
+    case "recusa": return `Cobrança de ${formatarValor(e.valor ?? 0)} recusada`;
     case "status": return `Status: ${e.status_novo ? STATUS[e.status_novo].rotulo : ""}`;
     default: return "Mensagem";
   }
@@ -157,6 +161,9 @@ const COR_BORDA: Record<Evento["tipo"], string> = {
   aprovacao: "border-l-emerald-500",
   duvida: "border-l-amber-500",
   resposta: "border-l-emerald-500",
+  cobranca: "border-l-sky-500",
+  aceite: "border-l-emerald-500",
+  recusa: "border-l-red-500",
 };
 
 const COR_NO: Record<Evento["tipo"], string> = {
@@ -168,6 +175,9 @@ const COR_NO: Record<Evento["tipo"], string> = {
   aprovacao: "bg-emerald-500",
   duvida: "bg-amber-500",
   resposta: "bg-emerald-500",
+  cobranca: "bg-sky-500",
+  aceite: "bg-emerald-500",
+  recusa: "bg-red-500",
 };
 
 const ICONE_NO: Partial<Record<Evento["tipo"], string>> = {
@@ -178,6 +188,8 @@ const ICONE_NO: Partial<Record<Evento["tipo"], string>> = {
   correcao: "M4 20h4L19 9l-4-4L4 16v4z",
   aprovacao: "M5 12.5l4.5 4.5L19 7.5",
   resposta: "M9 14L4 9l5-5M4 9h10a6 6 0 016 6v3",
+  aceite: "M5 12.5l4.5 4.5L19 7.5",
+  recusa: "M6 6l12 12M18 6L6 18",
 };
 
 /** Círculo de um evento na linha do tempo: ícone do tipo (ou "?" na pergunta). */
@@ -193,7 +205,7 @@ function NoDoEvento({ tipo, cor }: { tipo: Evento["tipo"]; cor: string }) {
           <path d={caminho} />
         </svg>
       ) : (
-        <span className="text-base font-bold leading-none">?</span>
+        <span className="text-base font-bold leading-none">{tipo === "cobranca" ? "$" : "?"}</span>
       )}
     </span>
   );
@@ -224,6 +236,20 @@ export default function DetalhePedido({
     ["Tipo", rotuloTipo(pedido.tipo)],
     ["Prazo desejado", dataCurtaIso(pedido.prazo)],
     ["Aberto em", dataHora(pedido.criado_em)],
+    ...(pedido.valor_cobranca != null
+      ? [
+          [
+            "Cobrança (só ao final)",
+            `${formatarValor(Number(pedido.valor_cobranca))} · ${
+              pedido.cobranca_status === "aceita"
+                ? `aceita${pedido.cobranca_aceita_por ? ` por ${pedido.cobranca_aceita_por}` : ""}`
+                : pedido.cobranca_status === "recusada"
+                  ? "recusada"
+                  : "aguardando aceite"
+            }`,
+          ] as [string, string],
+        ]
+      : []),
   ];
 
   const abertas = new Set(perguntasAbertas(eventos).map((e) => e.id));

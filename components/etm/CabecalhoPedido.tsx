@@ -33,7 +33,7 @@ export default function CabecalhoPedido({
           </span>
         </div>
         <div className="mt-2">
-          <EtapasPedido status={pedido.status} compacto marcas={marcas} />
+          <EtapasPedido status={pedido.status} compacto marcas={marcas} cobranca={pedido.cobranca_status} />
         </div>
       </div>
     </div>

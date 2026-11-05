@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { carregarDetalhe, getEtmUser, limiteDeEnvio } from "@/lib/etm-servidor";
-import { marcasDeDuvida, perguntasAbertas } from "@/lib/etm";
+import { marcasDeDuvida, perguntasAbertas, temAceite } from "@/lib/etm";
 import CabecalhoPedido from "@/components/etm/CabecalhoPedido";
 import DetalhePedido from "@/components/etm/DetalhePedido";
+import AceiteCobranca from "@/components/etm/AceiteCobranca";
 import PerguntasAbertas from "@/components/etm/PerguntasAbertas";
 import AcoesPedido from "@/components/etm/AcoesPedido";
 import HeroEtm from "@/components/etm/HeroEtm";
@@ -27,7 +28,10 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
       <HeroEtm eyebrow={`Pedido #${detalhe.pedido.numero}`} titulo={detalhe.pedido.titulo} />
       <div className="relative z-10 mx-auto -mt-14 max-w-4xl space-y-6 px-6">
         <Link href="/etm" className="inline-block text-sm font-medium text-blue-100 hover:text-white">← Voltar aos pedidos</Link>
-        <CabecalhoPedido pedido={detalhe.pedido} topo="top-18" marcas={marcasDeDuvida(detalhe.eventos)} />
+        <CabecalhoPedido pedido={detalhe.pedido} topo="top-18" marcas={marcasDeDuvida(detalhe.eventos, temAceite(detalhe.pedido))} />
+        {detalhe.pedido.status === "aguardando_aceite" && detalhe.pedido.valor_cobranca != null && (
+          <AceiteCobranca pedidoId={id} valor={Number(detalhe.pedido.valor_cobranca)} />
+        )}
         {abertas.length > 0 && (
           <PerguntasAbertas
             pedidoId={id}

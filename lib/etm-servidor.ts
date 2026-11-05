@@ -137,7 +137,7 @@ export async function validarArquivos(pedidoId: string, arquivos: unknown): Prom
 export async function criarEvento(
   db: Db,
   e: Pick<Evento, "autor" | "autor_nome" | "tipo"> &
-    Partial<Pick<Evento, "texto" | "status_novo" | "versao" | "link" | "responde_a" | "autor_id">> & { pedido_id: string },
+    Partial<Pick<Evento, "texto" | "status_novo" | "versao" | "link" | "responde_a" | "autor_id" | "valor">> & { pedido_id: string },
 ): Promise<string | null> {
   const { data, error } = await db
     .from("etm_eventos")
@@ -152,6 +152,7 @@ export async function criarEvento(
       link: e.link || null,
       responde_a: e.responde_a ?? null,
       autor_id: e.autor_id ?? null,
+      valor: e.valor ?? null,
     })
     .select("id")
     .single();
