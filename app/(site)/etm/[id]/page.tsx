@@ -9,7 +9,8 @@ import HeroEtm from "@/components/etm/HeroEtm";
 export const dynamic = "force-dynamic";
 
 export default async function PedidoEtmPage({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await getEtmUser())) redirect("/etm/login");
+  const user = await getEtmUser();
+  if (!user) redirect("/etm/login");
   const { id } = await params;
   const db = supabaseAdmin();
   const [detalhe, limite] = db ? await Promise.all([carregarDetalhe(db, id), limiteDeEnvio(db)]) : [null, 0];
@@ -23,7 +24,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
       <div className="relative z-10 mx-auto -mt-14 max-w-4xl space-y-6 px-6">
         <Link href="/etm" className="inline-block text-sm font-medium text-blue-100 hover:text-white">← Voltar aos pedidos</Link>
         <DetalhePedido {...detalhe} comTitulo={false} />
-        {!encerrado && <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="etm" limite={limite} />}
+        {!encerrado && <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="etm" limite={limite} usuarioId={user.id} />}
       </div>
     </div>
   );

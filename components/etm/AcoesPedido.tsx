@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ORDEM_STATUS, STATUS, type ArquivoEnviado, type StatusPedido } from "@/lib/etm";
+import { useRascunho } from "@/lib/etm-rascunho";
 import { enviarArquivos, type ProgressoEnvio } from "@/lib/etm-upload";
 import { criarUploadUrlEtm, responderPedido } from "@/app/(site)/etm/actions";
 import {
@@ -13,13 +14,14 @@ import {
 } from "@/app/(site)/admin/etm/actions";
 import SeletorArquivos from "./SeletorArquivos";
 
-type Props = { pedidoId: string; status: StatusPedido; modo: "etm" | "igor"; limite: number };
+type Props = { pedidoId: string; status: StatusPedido; modo: "etm" | "igor"; limite: number; usuarioId: string };
 type Resp = { ok: true } | { ok: false; erro: string };
 
-export default function AcoesPedido({ pedidoId, status, modo, limite }: Props) {
+export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId }: Props) {
   const router = useRouter();
-  const [texto, setTexto] = useState("");
-  const [link, setLink] = useState("");
+  // o que foi digitado sobrevive a uma recarga da página (cada pedido e cada pessoa têm o seu rascunho)
+  const { valores, atualizar, restaurado, limpar } = useRascunho(`etm-acao:${usuarioId}:${pedidoId}`, { texto: "", link: "" });
+  const { texto, link } = valores;
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [novoStatus, setNovoStatus] = useState<StatusPedido>(status === "recebido" ? "em_producao" : status);
   const [erro, setErro] = useState("");
@@ -36,8 +38,7 @@ export default function AcoesPedido({ pedidoId, status, modo, limite }: Props) {
       const enviados = await enviarArquivos(arquivos, (n, t) => preparar(pedidoId, n, t), setProgresso);
       const r = await acao(enviados);
       if (!r.ok) throw new Error(r.erro);
-      setTexto("");
-      setLink("");
+      limpar();
       setArquivos([]);
       router.refresh();
     } catch (e) {
@@ -60,9 +61,15 @@ export default function AcoesPedido({ pedidoId, status, modo, limite }: Props) {
         <p className="text-sm text-muted">Aprove o vídeo ou descreva o que precisa mudar. Pode anexar imagens de referência.</p>
       )}
 
+      {restaurado && texto && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
+          Recuperamos o texto que você estava escrevendo. Os arquivos precisam ser anexados de novo.
+        </p>
+      )}
+
       <textarea
         value={texto}
-        onChange={(e) => setTexto(e.target.value)}
+        onChange={(e) => atualizar({ texto: e.target.value })}
         rows={4}
         maxLength={4000}
         disabled={ocupado}
@@ -77,7 +84,7 @@ export default function AcoesPedido({ pedidoId, status, modo, limite }: Props) {
       {modo === "igor" && (
         <input
           value={link}
-          onChange={(e) => setLink(e.target.value)}
+          onChange={(e) => atualizar({ link: e.target.value })}
           type="url"
           disabled={ocupado}
           placeholder="Link (opcional): YouTube vira player na página; Drive e outros ficam como link"

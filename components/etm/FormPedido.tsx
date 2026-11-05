@@ -3,34 +3,47 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { chaveTipo, megas, outroPorUltimo, type TipoVideo } from "@/lib/etm";
+import { useRascunho } from "@/lib/etm-rascunho";
 import { enviarArquivos, type ProgressoEnvio } from "@/lib/etm-upload";
 import { criarPedido, criarUploadUrlEtm } from "@/app/(site)/etm/actions";
 import ModalNovoTipo from "./ModalNovoTipo";
 import SeletorArquivos from "./SeletorArquivos";
 
-export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limite: number }) {
+type Rascunho = { titulo: string; tipo: string; prazo: string; urgente: boolean; descricao: string; link: string };
+
+export default function FormPedido({ tipos, limite, usuarioId }: { tipos: TipoVideo[]; limite: number; usuarioId: string }) {
   const router = useRouter();
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [lista, setLista] = useState(tipos);
-  const [tipo, setTipo] = useState(tipos[0]?.rotulo ?? "");
   const [modal, setModal] = useState(false);
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [progresso, setProgresso] = useState<ProgressoEnvio | null>(null);
+  const [avisoVisto, setAvisoVisto] = useState(false);
 
+  const { valores, atualizar, restaurado, limpar } = useRascunho<Rascunho>(`etm-pedido:${usuarioId}`, {
+    titulo: "",
+    tipo: tipos[0]?.rotulo ?? "",
+    prazo: "",
+    urgente: false,
+    descricao: "",
+    link: "",
+  });
+
+  // um tipo guardado no rascunho pode ter sido ocultado depois: cai para o primeiro da lista
+  const tipo = lista.some((t) => t.rotulo === valores.tipo) ? valores.tipo : (lista[0]?.rotulo ?? "");
   const escolhido = lista.find((t) => t.rotulo === tipo);
 
   function tipoCriado(novo: TipoVideo) {
     // se já existia (mesmo nome, outra grafia), só seleciona o que existe
     if (!lista.some((t) => chaveTipo(t.rotulo) === chaveTipo(novo.rotulo))) setLista(outroPorUltimo([...lista, novo]));
-    setTipo(novo.rotulo);
+    atualizar({ tipo: novo.rotulo });
     setModal(false);
   }
 
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErro("");
-    const f = new FormData(e.currentTarget);
     const id = crypto.randomUUID();
     if (!tipo) return setErro("Escolha o tipo de pedido.");
     setEnviando(true);
@@ -38,15 +51,16 @@ export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limi
       const enviados = await enviarArquivos(arquivos, (nome, tam) => criarUploadUrlEtm(id, nome, tam), setProgresso);
       const r = await criarPedido({
         id,
-        titulo: String(f.get("titulo") ?? ""),
+        titulo: valores.titulo,
         tipo,
-        descricao: String(f.get("descricao") ?? ""),
-        prazo: String(f.get("prazo") ?? "") || null,
-        urgente: f.get("urgente") === "on",
-        link: String(f.get("link") ?? ""),
+        descricao: valores.descricao,
+        prazo: valores.prazo || null,
+        urgente: valores.urgente,
+        link: valores.link,
         arquivos: enviados,
       });
       if (!r.ok) throw new Error(r.erro);
+      limpar();
       router.push(`/etm/${r.id}`);
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Não foi possível enviar o pedido.");
@@ -60,16 +74,41 @@ export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limi
   return (
     <>
       <form onSubmit={enviar} className="card space-y-5 p-6 sm:p-8">
+        {restaurado && !avisoVisto && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p>
+              <span className="font-semibold">Recuperamos o que você tinha preenchido.</span> Os arquivos precisam ser anexados de novo.
+            </p>
+            <span className="flex gap-3 font-semibold">
+              <button type="button" onClick={() => setAvisoVisto(true)} className="hover:underline">
+                Ok
+              </button>
+              <button type="button" onClick={limpar} className="text-red-700 hover:underline">
+                Descartar rascunho
+              </button>
+            </span>
+          </div>
+        )}
+
         <div>
           <label htmlFor="titulo" className="mb-1.5 block text-sm font-semibold text-fg">Título do pedido</label>
-          <input id="titulo" name="titulo" required minLength={3} maxLength={120} placeholder="Ex.: Recap do workshop de compressores" className="field" />
+          <input
+            id="titulo"
+            value={valores.titulo}
+            onChange={(e) => atualizar({ titulo: e.target.value })}
+            required
+            minLength={3}
+            maxLength={120}
+            placeholder="Ex.: Recap do workshop de compressores"
+            className="field"
+          />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <label htmlFor="tipo" className="mb-1.5 block text-sm font-semibold text-fg">Tipo de pedido</label>
             <div className="flex gap-2">
-              <select id="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} disabled={enviando} className="field min-w-0 flex-1">
+              <select id="tipo" value={tipo} onChange={(e) => atualizar({ tipo: e.target.value })} disabled={enviando} className="field min-w-0 flex-1">
                 {lista.map((t) => (
                   <option key={t.rotulo} value={t.rotulo}>{t.rotulo}</option>
                 ))}
@@ -88,12 +127,17 @@ export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limi
           </div>
           <div>
             <label htmlFor="prazo" className="mb-1.5 block text-sm font-semibold text-fg">Prazo desejado</label>
-            <input id="prazo" name="prazo" type="date" className="field" />
+            <input id="prazo" type="date" value={valores.prazo} onChange={(e) => atualizar({ prazo: e.target.value })} className="field" />
           </div>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-fg">
-          <input type="checkbox" name="urgente" className="h-4 w-4 accent-accent-strong" />
+          <input
+            type="checkbox"
+            checked={valores.urgente}
+            onChange={(e) => atualizar({ urgente: e.target.checked })}
+            className="h-4 w-4 accent-accent-strong"
+          />
           Pedido urgente
         </label>
 
@@ -101,7 +145,8 @@ export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limi
           <label htmlFor="descricao" className="mb-1.5 block text-sm font-semibold text-fg">O que você precisa</label>
           <textarea
             id="descricao"
-            name="descricao"
+            value={valores.descricao}
+            onChange={(e) => atualizar({ descricao: e.target.value })}
             required
             minLength={10}
             maxLength={4000}
@@ -119,7 +164,14 @@ export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limi
 
         <div>
           <label htmlFor="link" className="mb-1.5 block text-sm font-semibold text-fg">Link da pasta (opcional)</label>
-          <input id="link" name="link" type="url" placeholder="https://drive.google.com/..." className="field" />
+          <input
+            id="link"
+            type="url"
+            value={valores.link}
+            onChange={(e) => atualizar({ link: e.target.value })}
+            placeholder="https://drive.google.com/..."
+            className="field"
+          />
           <p className="mt-1.5 text-xs text-muted">Para material que não cabe no envio, como vídeos grandes.</p>
         </div>
 
@@ -135,9 +187,12 @@ export default function FormPedido({ tipos, limite }: { tipos: TipoVideo[]; limi
         )}
         {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
 
-        <button disabled={enviando} className="btn-dark w-full sm:w-auto">
-          {enviando ? "Enviando..." : "Enviar pedido"}
-        </button>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <button disabled={enviando} className="btn-dark w-full sm:w-auto">
+            {enviando ? "Enviando..." : "Enviar pedido"}
+          </button>
+          <p className="text-xs text-muted">O que você escreve fica salvo neste navegador até o pedido ser enviado. Os arquivos não.</p>
+        </div>
       </form>
 
       {/* fora do <form>: o Enter dentro do modal não pode enviar o pedido */}
