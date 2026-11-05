@@ -232,12 +232,20 @@ export async function criarTipo(nome: string, descricao: string): Promise<Result
 }
 
 /** A ETM responde a uma pergunta de quem produz; a pergunta deixa de ficar em destaque. */
-export async function responderDuvida(pedidoId: string, duvidaId: string, texto: string): Promise<Resultado> {
+export async function responderDuvida(
+  pedidoId: string,
+  duvidaId: string,
+  texto: string,
+  arquivos: ArquivoEnviado[] = [],
+): Promise<Resultado> {
   const user = await getEtmUser();
   if (!user) return { ok: false, erro: "Sem permissão." };
   if (!ehUuid(pedidoId) || !ehUuid(duvidaId)) return { ok: false, erro: "Pergunta inválida." };
   const msg = limpar(texto, 4000);
-  if (msg.length < 2) return { ok: false, erro: "Escreva a resposta." };
+  const anexos = await validarArquivos(pedidoId, arquivos);
+  if (typeof anexos === "string") return { ok: false, erro: anexos };
+  // basta um caractere, ou só um arquivo anexado
+  if (msg.length < 1 && anexos.length === 0) return { ok: false, erro: "Escreva a resposta ou anexe um arquivo." };
 
   const db = supabaseAdmin();
   if (!db) return { ok: false, erro: "Serviço indisponível." };
@@ -252,7 +260,7 @@ export async function responderDuvida(pedidoId: string, duvidaId: string, texto:
   const { data: jaRespondida } = await db.from("etm_eventos").select("id").eq("responde_a", duvidaId).limit(1);
   if (jaRespondida?.length) return { ok: false, erro: "Esta pergunta já foi respondida." };
 
-  await criarEvento(db, {
+  const eventoId = await criarEvento(db, {
     pedido_id: pedidoId,
     autor: "etm",
     autor_nome: user.nome,
@@ -261,6 +269,7 @@ export async function responderDuvida(pedidoId: string, duvidaId: string, texto:
     texto: msg,
     responde_a: duvidaId,
   });
+  await registrarArquivos(db, pedidoId, eventoId, "anexo", anexos);
   await atualizarPedido(db, pedidoId);
   revalidatePath(`/etm/${pedidoId}`);
   revalidatePath(`/admin/etm/${pedidoId}`);
@@ -292,8 +301,9 @@ export async function editarMensagem(eventoId: string, texto: string): Promise<R
     return { ok: false, erro: "Você não pode editar esta mensagem." };
   }
   const msg = limpar(texto, 4000);
-  if (msg.length < (ev.tipo === "duvida" ? 5 : 2)) {
-    return { ok: false, erro: ev.tipo === "duvida" ? "Escreva a pergunta." : "Escreva a mensagem." };
+  const minimo = ev.tipo === "duvida" ? 5 : ev.tipo === "resposta" ? 1 : 2;
+  if (msg.length < minimo) {
+    return { ok: false, erro: ev.tipo === "duvida" ? "Escreva a pergunta." : ev.tipo === "resposta" ? "Escreva a resposta." : "Escreva a mensagem." };
   }
   await db.from("etm_eventos").update({ texto: msg, editado_em: new Date().toISOString() }).eq("id", eventoId);
   atualizarTelasDoPedido(ev.pedido_id);

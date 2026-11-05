@@ -31,6 +31,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
         {abertas.length > 0 && (
           <PerguntasAbertas
             pedidoId={id}
+            limite={limite}
             perguntas={abertas.map((e) => ({ id: e.id, autor: e.autor_nome, texto: e.texto, quando: e.criado_em }))}
           />
         )}
