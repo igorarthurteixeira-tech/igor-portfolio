@@ -348,3 +348,28 @@ export async function iniciarSemCobranca(pedidoId: string, texto: string): Promi
   atualizarTelas(pedidoId);
   return { ok: true };
 }
+
+/** Marca (ou desmarca) o pagamento da cobrança como recebido. É isso que libera o download do vídeo final para o cliente. */
+export async function marcarPagamento(pedidoId: string, recebido: boolean): Promise<Resultado> {
+  const admin = await getAdminUser();
+  if (!admin) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(pedidoId)) return { ok: false, erro: "Pedido inválido." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  const { data: pedido } = await db.from("etm_pedidos").select("valor_cobranca,cobranca_status").eq("id", pedidoId).maybeSingle();
+  if (pedido?.valor_cobranca == null || pedido.cobranca_status !== "aceita") {
+    return { ok: false, erro: "Só dá para marcar o pagamento de uma cobrança que o cliente aceitou." };
+  }
+  await criarEvento(db, {
+    pedido_id: pedidoId,
+    autor: "igor",
+    autor_nome: NOME_ADMIN,
+    autor_id: admin.id,
+    tipo: "pagamento",
+    texto: recebido ? "Pagamento recebido. O download do vídeo final está liberado." : "Marcação de pagamento desfeita.",
+    valor: Number(pedido.valor_cobranca),
+  });
+  await atualizarPedido(db, pedidoId, { cobranca_paga_em: recebido ? new Date().toISOString() : null });
+  atualizarTelas(pedidoId);
+  return { ok: true };
+}

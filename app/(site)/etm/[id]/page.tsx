@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { carregarDetalhe, getEtmUser, limiteDeEnvio } from "@/lib/etm-servidor";
-import { marcasDeDuvida, perguntasAbertas, temAceite } from "@/lib/etm";
+import { formatarValor, marcasDeDuvida, perguntasAbertas, temAceite } from "@/lib/etm";
 import CabecalhoPedido from "@/components/etm/CabecalhoPedido";
 import DetalhePedido from "@/components/etm/DetalhePedido";
 import AceiteCobranca from "@/components/etm/AceiteCobranca";
@@ -29,6 +29,17 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
       <div className="relative z-10 mx-auto -mt-14 max-w-4xl space-y-6 px-6">
         <Link href="/etm" className="inline-block text-sm font-medium text-blue-100 hover:text-white">← Voltar aos pedidos</Link>
         <CabecalhoPedido pedido={detalhe.pedido} topo="top-18" marcas={marcasDeDuvida(detalhe.eventos, temAceite(detalhe.pedido))} />
+        {detalhe.pedido.valor_cobranca != null &&
+          !detalhe.pedido.cobranca_paga_em &&
+          (detalhe.pedido.status === "aprovado" || detalhe.pedido.status === "enviado") && (
+            <div className="card border-2 border-sky-400 bg-sky-50 px-5 py-4 text-sm text-sky-900">
+              <p className="font-semibold">Vídeo aprovado</p>
+              <p className="mt-1">
+                O download do vídeo final será liberado quando o pagamento de{" "}
+                <strong>{formatarValor(Number(detalhe.pedido.valor_cobranca))}</strong> for confirmado.
+              </p>
+            </div>
+          )}
         {detalhe.pedido.status === "aguardando_aceite" && detalhe.pedido.valor_cobranca != null && (
           <AceiteCobranca pedidoId={id} valor={Number(detalhe.pedido.valor_cobranca)} />
         )}

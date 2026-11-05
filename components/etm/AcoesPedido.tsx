@@ -12,6 +12,7 @@ import {
   entregarVersao,
   fazerPergunta,
   iniciarSemCobranca,
+  marcarPagamento,
   mudarStatus,
   proporCobranca,
   retirarCobranca,
@@ -27,7 +28,13 @@ type Props = {
   /** Comentários marcados no vídeo que ainda não foram enviados (a ETM, ao avaliar). */
   notasPendentes?: number;
   /** Situação da cobrança do pedido (visão de quem produz). */
-  cobranca?: { status: CobrancaStatus; valor: number | null; aceitaPor: string | null; aceitaEm: string | null };
+  cobranca?: {
+    status: CobrancaStatus;
+    valor: number | null;
+    aceitaPor: string | null;
+    aceitaEm: string | null;
+    pagaEm: string | null;
+  };
 };
 type Resp = { ok: true } | { ok: false; erro: string };
 
@@ -163,6 +170,33 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId,
         <p className="text-sm text-muted">
           {fase === "aceitar" && status === "correcao" ? "A ETM pediu correções. Avise que viu e que começou a refazer. A mensagem é opcional." : t.ajuda}
         </p>
+      )}
+
+      {modo === "igor" && cobranca?.status === "aceita" && cobranca.valor != null && status !== "cancelado" && (
+        <div
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ${
+            cobranca.pagaEm ? "border-emerald-300 bg-emerald-50" : "border-sky-300 bg-sky-50"
+          }`}
+        >
+          <div className="min-w-0 text-sm">
+            <p className="font-semibold text-fg">Cobrança de {formatarValor(cobranca.valor)}</p>
+            <p className="text-muted">
+              {cobranca.pagaEm
+                ? `Pagamento recebido em ${dataHora(cobranca.pagaEm)}. O cliente já pode baixar o vídeo final.`
+                : "Aguardando o pagamento. O cliente só baixa o vídeo final depois que você marcar o pagamento como recebido."}
+            </p>
+          </div>
+          <button
+            disabled={ocupado}
+            onClick={() => {
+              if (cobranca.pagaEm && !window.confirm("Desfazer o pagamento recebido? O download volta a ficar bloqueado para o cliente.")) return;
+              rodar(() => marcarPagamento(pedidoId, !cobranca.pagaEm));
+            }}
+            className={cobranca.pagaEm ? "btn-outline px-4 py-2" : "rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"}
+          >
+            {cobranca.pagaEm ? "Desfazer" : "Marcar pagamento como recebido"}
+          </button>
+        </div>
       )}
 
       {naRecepcao && !cobrancaAceita && (

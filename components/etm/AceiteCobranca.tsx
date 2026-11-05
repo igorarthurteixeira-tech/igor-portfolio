@@ -41,7 +41,7 @@ export default function AceiteCobranca({ pedidoId, valor }: { pedidoId: string; 
 
       <p className="rounded-lg bg-white px-4 py-3 text-sm leading-relaxed text-fg">
         <span className="font-semibold">Nada é cobrado agora.</span> A cobrança só será feita <span className="font-semibold">ao final do vídeo</span>,
-        depois que ele estiver pronto e aprovado. O seu aceite fica registrado no pedido.
+        depois que ele estiver pronto e aprovado. O download do vídeo final é liberado depois da confirmação do pagamento. O seu aceite fica registrado no pedido.
       </p>
 
       {!recusando ? (
@@ -55,7 +55,7 @@ export default function AceiteCobranca({ pedidoId, valor }: { pedidoId: string; 
               className="mt-0.5 h-4 w-4 accent-sky-600"
             />
             <span>
-              Li e concordo com a cobrança de <strong>{valorTexto}</strong> por este vídeo, a ser feita apenas ao final.
+              Li e concordo com a cobrança de <strong>{valorTexto}</strong> por este vídeo, a ser feita apenas ao final, e que o download do vídeo final só é liberado depois do pagamento.
             </span>
           </label>
           {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}

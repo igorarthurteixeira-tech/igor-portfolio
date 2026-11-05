@@ -1,5 +1,5 @@
 import { acessoDrive, abrirArquivo } from "@/lib/drive";
-import { MIME_ETM } from "@/lib/etm";
+import { MIME_ETM, downloadLiberado, type Pedido } from "@/lib/etm";
 import { ehUuid, getEtmUser } from "@/lib/etm-servidor";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -22,13 +22,17 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   const { data: arquivo } = await db.from("etm_arquivos").select("caminho,nome,papel,pedido_id,evento_id").eq("id", id).maybeSingle();
   if (!arquivo || !String(arquivo.caminho).startsWith("drive:")) return new Response("Arquivo não encontrado.", { status: 404 });
 
-  // O que quem produz mandou (versões entregues e anexos dele) só pode ser levado depois da aprovação; o painel não tem limite.
+  // O que quem produz mandou (versões entregues e anexos dele) só pode ser levado depois da aprovação (e do pagamento, se houver cobrança); o painel não tem limite.
   // Antes disso o arquivo só vai para o player e para as imagens do próprio sistema, e nunca para o botão de baixar
   // nem para quem abre o endereço direto na barra do navegador e usa "Salvar como" (o navegador informa o destino em Sec-Fetch-Dest).
   const comoCliente = !user.admin || new URL(request.url).searchParams.get("area") === "etm";
   if (comoCliente) {
-    const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", arquivo.pedido_id).maybeSingle();
-    if (pedido?.status !== "aprovado" && pedido?.status !== "enviado") {
+    const { data: pedido } = await db
+      .from("etm_pedidos")
+      .select("status,valor_cobranca,cobranca_paga_em")
+      .eq("id", arquivo.pedido_id)
+      .maybeSingle();
+    if (!pedido || !downloadLiberado(pedido as Pedido)) {
       let deQuemProduz = arquivo.papel === "entrega";
       if (!deQuemProduz && arquivo.evento_id) {
         const { data: evento } = await db.from("etm_eventos").select("autor").eq("id", arquivo.evento_id).maybeSingle();

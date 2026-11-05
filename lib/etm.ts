@@ -79,6 +79,8 @@ export type Pedido = {
   cobranca_status: CobrancaStatus;
   cobranca_aceita_em: string | null;
   cobranca_aceita_por: string | null;
+  /** Quando quem produz marcou o pagamento como recebido; vazio enquanto não recebeu. */
+  cobranca_paga_em: string | null;
   criado_em: string;
   atualizado_em: string;
 };
@@ -88,7 +90,7 @@ export type Evento = {
   pedido_id: string;
   autor: "etm" | "igor";
   autor_nome: string;
-  tipo: "criado" | "comentario" | "status" | "entrega" | "correcao" | "aprovacao" | "duvida" | "resposta" | "cobranca" | "aceite" | "recusa";
+  tipo: "criado" | "comentario" | "status" | "entrega" | "correcao" | "aprovacao" | "duvida" | "resposta" | "cobranca" | "aceite" | "recusa" | "pagamento";
   texto: string;
   /** Valor da cobrança, nos eventos de cobrança, aceite e recusa. */
   valor: number | null;
@@ -184,6 +186,7 @@ export const ROTULO_EVENTO: Record<Evento["tipo"], string> = {
   cobranca: "Cobrança proposta",
   aceite: "Cobrança aceita",
   recusa: "Cobrança recusada",
+  pagamento: "Pagamento recebido",
 };
 
 /** Perguntas que ainda não têm resposta (a resposta aponta para a pergunta em `responde_a`). */
@@ -397,3 +400,10 @@ export function paraNumeroBR(texto: string) {
   else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ""); // "1.234" e "1.234.567" são milhares
   return Number(t);
 }
+
+/**
+ * O que quem produz mandou (versões entregues e anexos dele) só pode ser baixado pela ETM com o pedido aprovado ou enviado.
+ * Se o pedido tem cobrança, além disso o pagamento precisa ter sido marcado como recebido.
+ */
+export const downloadLiberado = (p: Pick<Pedido, "status" | "valor_cobranca" | "cobranca_paga_em">) =>
+  (p.status === "aprovado" || p.status === "enviado") && (p.valor_cobranca == null || !!p.cobranca_paga_em);

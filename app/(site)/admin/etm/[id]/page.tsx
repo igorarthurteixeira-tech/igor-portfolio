@@ -32,6 +32,7 @@ export default async function AdminPedidoEtmPage({ params }: { params: Promise<{
             valor: detalhe.pedido.valor_cobranca != null ? Number(detalhe.pedido.valor_cobranca) : null,
             aceitaPor: detalhe.pedido.cobranca_aceita_por,
             aceitaEm: detalhe.pedido.cobranca_aceita_em,
+            pagaEm: detalhe.pedido.cobranca_paga_em,
           }}
         />
         <DetalhePedido {...detalhe} visao="igor" quem={{ id: user.id, admin: true }} />

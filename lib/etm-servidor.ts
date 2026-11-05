@@ -18,6 +18,7 @@ import {
   type Arquivo,
   type ArquivoEnviado,
   type ComentarioVideo,
+  downloadLiberado,
   type Evento,
   type Pedido,
   type ResumoPedido,
@@ -206,8 +207,7 @@ export async function carregarDetalhe(db: Db, id: string, comoPainel = false) {
   const noDrive = (a: Arquivo) => a.caminho.startsWith("drive:");
   const urls = new Map<string, string>();
   const autorDoEvento = new Map((eventos ?? []).map((e) => [e.id as string, e.autor as string]));
-  const status = (pedido as Pedido).status;
-  const liberado = status === "aprovado" || status === "enviado";
+  const liberado = downloadLiberado(pedido as Pedido);
   const baixarBloqueado = (a: Arquivo) =>
     !comoPainel && !liberado && (a.papel === "entrega" || autorDoEvento.get(a.evento_id ?? "") === "igor");
   const doStorage = lista.filter((a) => !noDrive(a));

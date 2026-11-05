@@ -69,6 +69,8 @@ type ContextoArquivos = {
   status: Pedido["status"];
   visao: Visao;
   euId: string;
+  /** Por que o download ainda não está liberado (aparece no lugar do botão Baixar). */
+  semDownloadMotivo: string;
   /** Evento da versão mais recente: só ela aceita comentários no vídeo. */
   ultimaEntregaId: string | null;
 };
@@ -125,7 +127,7 @@ function Arquivos({ itens, contexto }: { itens: ArquivoComUrl[]; contexto: Conte
                     Baixar
                   </a>
                 ) : bloqueado ? (
-                  <span className="text-slate-400" title="O download fica disponível depois que o pedido for aprovado">Download após a aprovação</span>
+                  <span className="text-slate-400" title={contexto.semDownloadMotivo}>{contexto.semDownloadMotivo}</span>
                 ) : null}
               </span>
             </div>
@@ -147,6 +149,7 @@ function titulo(e: Evento) {
     case "cobranca": return `Cobrança de ${formatarValor(e.valor ?? 0)} enviada para aceite`;
     case "aceite": return `Cobrança de ${formatarValor(e.valor ?? 0)} aceita`;
     case "recusa": return `Cobrança de ${formatarValor(e.valor ?? 0)} recusada`;
+    case "pagamento": return e.texto.startsWith("Pagamento recebido") ? "Pagamento recebido" : "Pagamento desmarcado";
     case "status": return `Status: ${e.status_novo ? STATUS[e.status_novo].rotulo : ""}`;
     default: return "Mensagem";
   }
@@ -164,6 +167,7 @@ const COR_BORDA: Record<Evento["tipo"], string> = {
   cobranca: "border-l-sky-500",
   aceite: "border-l-emerald-500",
   recusa: "border-l-red-500",
+  pagamento: "border-l-emerald-600",
 };
 
 const COR_NO: Record<Evento["tipo"], string> = {
@@ -178,6 +182,7 @@ const COR_NO: Record<Evento["tipo"], string> = {
   cobranca: "bg-sky-500",
   aceite: "bg-emerald-500",
   recusa: "bg-red-500",
+  pagamento: "bg-emerald-600",
 };
 
 const ICONE_NO: Partial<Record<Evento["tipo"], string>> = {
@@ -205,7 +210,7 @@ function NoDoEvento({ tipo, cor }: { tipo: Evento["tipo"]; cor: string }) {
           <path d={caminho} />
         </svg>
       ) : (
-        <span className="text-base font-bold leading-none">{tipo === "cobranca" ? "$" : "?"}</span>
+        <span className="text-base font-bold leading-none">{tipo === "cobranca" || tipo === "pagamento" ? "$" : "?"}</span>
       )}
     </span>
   );
@@ -241,11 +246,13 @@ export default function DetalhePedido({
           [
             "Cobrança (só ao final)",
             `${formatarValor(Number(pedido.valor_cobranca))} · ${
-              pedido.cobranca_status === "aceita"
-                ? `aceita${pedido.cobranca_aceita_por ? ` por ${pedido.cobranca_aceita_por}` : ""}`
-                : pedido.cobranca_status === "recusada"
-                  ? "recusada"
-                  : "aguardando aceite"
+              pedido.cobranca_paga_em
+                ? `pagamento recebido em ${dataHora(pedido.cobranca_paga_em)}`
+                : pedido.cobranca_status === "aceita"
+                  ? `aceita${pedido.cobranca_aceita_por ? ` por ${pedido.cobranca_aceita_por}` : ""}, aguardando pagamento`
+                  : pedido.cobranca_status === "recusada"
+                    ? "recusada"
+                    : "aguardando aceite"
             }`,
           ] as [string, string],
         ]
@@ -259,6 +266,12 @@ export default function DetalhePedido({
     status: pedido.status,
     visao,
     euId: quem?.id ?? "",
+    semDownloadMotivo:
+      pedido.valor_cobranca == null
+        ? "Download após a aprovação"
+        : pedido.status === "aprovado" || pedido.status === "enviado"
+          ? "Download liberado após a confirmação do pagamento"
+          : "Download após a aprovação e o pagamento",
     ultimaEntregaId: ultimaEntrega?.id ?? null,
   };
   const pontosDaCorrecao = (id: string) => comentarios.filter((c) => c.correcao_evento_id === id);
