@@ -35,8 +35,11 @@ export default function PrivacidadePage() {
           </li>
           <li>
             <strong>Métricas de visita:</strong> página visitada, cliques em botões, página de origem e um
-            identificador anônimo de sessão. Servem só para saber quais partes do site são úteis. Não há
-            identificação pessoal nem cookies de publicidade.
+            identificador anônimo de sessão. Também guardamos, para separar visitas de pessoas de robôs: o
+            navegador e o sistema (ex.: &ldquo;Chrome, Windows, computador&rdquo;), o tamanho da tela, o idioma, o fuso
+            horário, o país e se houve movimento de mouse, rolagem, toque ou tecla. O endereço IP não é guardado.
+            Servem só para saber quais partes do site são úteis. Não há identificação pessoal nem cookies de
+            publicidade.
           </li>
         </ul>
 

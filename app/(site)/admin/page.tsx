@@ -13,6 +13,12 @@ type Evento = {
   sessao: string | null;
   referrer: string | null;
   created_at: string;
+  aparelho: string | null;
+  pais: string | null;
+  /** Houve gesto (mouse, rolagem, toque, tecla) antes de registrar; vazio nos registros antigos. */
+  interagiu: boolean | null;
+  suspeito: boolean;
+  motivo_suspeita: string | null;
 };
 
 const PERIODOS = [7, 30, 90] as const;
@@ -87,7 +93,7 @@ export default async function AdminPage({
   const [{ data: ev }, naoLidasRes, { data: pubs }] = await Promise.all([
     db
       .from("eventos")
-      .select("tipo,caminho,alvo,sessao,referrer,created_at")
+      .select("tipo,caminho,alvo,sessao,referrer,created_at,aparelho,pais,interagiu,suspeito,motivo_suspeita")
       .gte("created_at", diasAtras(dias).toISOString())
       .order("created_at", { ascending: false })
       .limit(LIMITE_EVENTOS),
@@ -100,12 +106,15 @@ export default async function AdminPage({
       .limit(100),
   ]);
 
-  const eventos = (ev ?? []) as Evento[];
+  // os números contam só visitas que passaram na verificação; as suspeitas ficam separadas, com o motivo
+  const todos = (ev ?? []) as Evento[];
+  const eventos = todos.filter((e) => !e.suspeito);
+  const suspeitos = todos.filter((e) => e.suspeito);
   const naoLidas = naoLidasRes.count ?? 0;
   const proximas = ((pubs ?? []) as Publicacao[])
     .filter((p) => p.redes.some((r) => p.status_redes[r] !== "publicado"))
     .slice(0, 4);
-  const truncado = eventos.length >= LIMITE_EVENTOS;
+  const truncado = todos.length >= LIMITE_EVENTOS;
   const views = eventos.filter((e) => e.tipo === "view");
   const cliques = eventos.filter((e) => e.tipo === "click");
   const sessoes = new Set(views.map((v) => v.sessao).filter(Boolean)).size;
@@ -150,7 +159,17 @@ export default async function AdminPage({
     ["Páginas mais vistas", top(views.map((v) => v.caminho))],
     ["Cliques por destino", top(cliques.map((c) => c.alvo))],
     ["Origem do tráfego", top(views.map((v) => host(v.referrer)))],
+    ["Aparelho e navegador", top(views.map((v) => v.aparelho))],
+    ["País", top(views.map((v) => v.pais))],
   ] as const;
+
+  // quantas visitas têm gesto humano comprovado (as antigas, anteriores à verificação, ficam de fora da conta)
+  const verificaveis = views.filter((v) => v.interagiu !== null);
+  const confirmadas = verificaveis.filter((v) => v.interagiu === true).length;
+  const motivos = top(
+    suspeitos.flatMap((s) => (s.motivo_suspeita ?? "sem motivo registrado").split("; ")),
+    10,
+  );
 
   const chip = (ativo: boolean) =>
     `rounded-lg px-3 py-1.5 text-xs font-medium transition ${
@@ -184,6 +203,29 @@ export default async function AdminPage({
           período; os números mostram apenas os mais recentes.
         </p>
       )}
+      <div className="mb-4 rounded-lg border border-line bg-white px-4 py-3 text-sm text-muted">
+        <p>
+          <span className="font-semibold text-fg">Verificação:</span>{" "}
+          {verificaveis.length > 0
+            ? `${confirmadas} de ${verificaveis.length} visualizações com gesto humano confirmado (mouse, rolagem, toque ou tecla).`
+            : "ainda sem visitas verificadas neste período."}{" "}
+          {suspeitos.length > 0
+            ? `${suspeitos.length} ${suspeitos.length === 1 ? "evento suspeito foi ignorado" : "eventos suspeitos foram ignorados"} nos números.`
+            : "Nenhum evento suspeito no período."}
+        </p>
+        {motivos.length > 0 && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-semibold text-accent-strong">Ver motivos</summary>
+            <ul className="mt-2 space-y-1 text-xs">
+              {motivos.map(([motivo, n]) => (
+                <li key={motivo}>
+                  {n}× {motivo}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <div key={c.titulo} className="card p-5">
