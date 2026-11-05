@@ -3,6 +3,7 @@ import {
   dataCurtaIso,
   dicaStatus,
   rotuloStatus,
+  tempoDeVideo,
   dataHora,
   ehImagem,
   ehPdf,
@@ -12,6 +13,7 @@ import {
   youtubeId,
   perguntasAbertas,
   permissoesMensagem,
+  type ComentarioVideo,
   type Evento,
   type Pedido,
   type Visao,
@@ -20,6 +22,7 @@ import type { ArquivoComUrl } from "@/lib/etm-servidor";
 import AbrirArquivo from "./AbrirArquivo";
 import { ImagemProtegida, VideoProtegido } from "./MidiaProtegida";
 import MensagemEditavel from "./MensagemEditavel";
+import VideoComentavel from "./VideoComentavel";
 
 export function SeloStatus({ status, visao = "etm" }: { status: Pedido["status"]; visao?: Visao }) {
   return (
@@ -59,7 +62,10 @@ function LinkOuPlayer({ link, titulo }: { link: string; titulo: string }) {
   );
 }
 
-function Arquivos({ itens }: { itens: ArquivoComUrl[] }) {
+/** O que a lista de arquivos precisa saber de quem olha e do pedido, para os comentários no vídeo. */
+type ContextoArquivos = { comentarios: ComentarioVideo[]; status: Pedido["status"]; visao: Visao; euId: string };
+
+function Arquivos({ itens, contexto }: { itens: ArquivoComUrl[]; contexto: ContextoArquivos }) {
   if (itens.length === 0) return null;
   return (
     <ul className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -70,7 +76,19 @@ function Arquivos({ itens }: { itens: ArquivoComUrl[] }) {
         return (
           <li key={a.id} className="overflow-hidden rounded-xl border border-line bg-page">
             {a.url && ehVideo(a.nome) ? (
-              <VideoProtegido src={a.url} className="max-h-96 w-full bg-black" />
+              a.papel === "entrega" ? (
+                <VideoComentavel
+                  src={a.url}
+                  arquivoId={a.id}
+                  classeVideo="max-h-96 w-full bg-black"
+                  comentarios={contexto.comentarios.filter((c) => c.arquivo_id === a.id)}
+                  podeComentar={contexto.visao === "etm" && contexto.status === "em_avaliacao"}
+                  podeResolver={contexto.visao === "igor"}
+                  euId={contexto.euId}
+                />
+              ) : (
+                <VideoProtegido src={a.url} className="max-h-96 w-full bg-black" />
+              )
             ) : a.url && ehImagem(a.nome) ? (
               <AbrirArquivo url={a.url} nome={a.nome} urlBaixar={a.urlBaixar} className="block w-full">
                 <ImagemProtegida src={a.url} alt={a.nome} className="max-h-72 w-full bg-black object-contain" />
@@ -170,10 +188,13 @@ export default function DetalhePedido({
   eventos,
   arquivos,
   comTitulo = true,
+  comentarios = [],
   quem,
   visao = "etm",
 }: {
   comTitulo?: boolean;
+  /** Comentários marcados no tempo dos vídeos entregues. */
+  comentarios?: ComentarioVideo[];
   /** Quem está olhando a página (muda o texto de alguns status). */
   visao?: Visao;
   /** Quem está olhando a página: define quais mensagens ele pode editar ou excluir. */
@@ -190,6 +211,8 @@ export default function DetalhePedido({
   ];
 
   const abertas = new Set(perguntasAbertas(eventos).map((e) => e.id));
+  const contexto: ContextoArquivos = { comentarios, status: pedido.status, visao, euId: quem?.id ?? "" };
+  const pontosDaCorrecao = (id: string) => comentarios.filter((c) => c.correcao_evento_id === id);
 
   return (
     <div className="space-y-6">
@@ -256,7 +279,20 @@ export default function DetalhePedido({
                 e.texto && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-fg">{e.texto}</p>
               )}
               {e.link && <LinkOuPlayer link={e.link} titulo={titulo(e)} />}
-              <Arquivos itens={arquivos.filter((a) => a.evento_id === e.id)} />
+              {e.tipo === "correcao" && pontosDaCorrecao(e.id).length > 0 && (
+                <div className="mt-3 rounded-lg bg-orange-50 p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wider text-orange-800">Comentários marcados no vídeo</p>
+                  <ul className="space-y-1.5 text-sm">
+                    {pontosDaCorrecao(e.id).map((n) => (
+                      <li key={n.id} className="flex gap-2">
+                        <span className="h-fit shrink-0 rounded bg-orange-200 px-1.5 text-xs font-bold tabular-nums text-orange-900">{tempoDeVideo(n.segundo)}</span>
+                        <span className={n.feito ? "text-slate-400 line-through" : "text-fg"}>{n.texto}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <Arquivos itens={arquivos.filter((a) => a.evento_id === e.id)} contexto={contexto} />
               </div>
             </li>
             );

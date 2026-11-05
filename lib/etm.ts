@@ -331,3 +331,29 @@ export function dicaStatus(status: StatusPedido, visao: Visao = "etm") {
   if (visao === "igor" && status === "em_avaliacao") return "A versão foi entregue e aguarda a avaliação do cliente.";
   return STATUS[status].dica;
 }
+
+/** Comentário marcado num segundo de um vídeo entregue (ponto de correção). */
+export type ComentarioVideo = {
+  id: string;
+  pedido_id: string;
+  arquivo_id: string;
+  segundo: number;
+  texto: string;
+  autor_nome: string;
+  autor_id: string | null;
+  /** Quem produz marca como feito depois de corrigir aquele ponto. */
+  feito: boolean;
+  /** Ligado ao pedido de correção que o levou; vazio enquanto ainda é rascunho da correção. */
+  correcao_evento_id: string | null;
+  criado_em: string;
+  editado_em: string | null;
+};
+
+/** "1:05" ou "1:02:05": segundos de um vídeo no formato de relógio. */
+export function tempoDeVideo(s: number) {
+  const t = Number.isFinite(s) && s > 0 ? s : 0;
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const seg = String(Math.floor(t % 60)).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${seg}` : `${m}:${seg}`;
+}

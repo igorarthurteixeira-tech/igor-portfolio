@@ -248,3 +248,14 @@ export async function desconectarDriveEtm(): Promise<Resultado> {
   atualizarTelas();
   return { ok: true };
 }
+
+/** Quem produz marca um comentário do vídeo como feito (ou desfaz). */
+export async function alternarComentarioFeito(id: string, feito: boolean): Promise<Resultado> {
+  if (!(await getAdminUser())) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(id)) return { ok: false, erro: "Comentário inválido." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Supabase não configurado." };
+  const { data } = await db.from("etm_comentarios_video").update({ feito }).eq("id", id).select("pedido_id").maybeSingle();
+  if (data) atualizarTelas(data.pedido_id as string);
+  return { ok: true };
+}

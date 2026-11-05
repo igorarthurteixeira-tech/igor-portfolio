@@ -15,7 +15,15 @@ import {
 } from "@/app/(site)/admin/etm/actions";
 import SeletorArquivos from "./SeletorArquivos";
 
-type Props = { pedidoId: string; status: StatusPedido; modo: "etm" | "igor"; limite: number; usuarioId: string };
+type Props = {
+  pedidoId: string;
+  status: StatusPedido;
+  modo: "etm" | "igor";
+  limite: number;
+  usuarioId: string;
+  /** Comentários marcados no vídeo que ainda não foram enviados (a ETM, ao avaliar). */
+  notasPendentes?: number;
+};
 type Resp = { ok: true } | { ok: false; erro: string };
 
 /**
@@ -64,7 +72,7 @@ const TEXTOS: Record<Fase, { titulo: string; ajuda: string; placeholder: string 
   },
 };
 
-export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId }: Props) {
+export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId, notasPendentes = 0 }: Props) {
   const router = useRouter();
   // o que foi digitado sobrevive a uma recarga da página (cada pedido e cada pessoa têm o seu rascunho)
   const { valores, atualizar, restaurado, limpar } = useRascunho(`etm-acao:${usuarioId}:${pedidoId}`, { texto: "", link: "" });
@@ -115,7 +123,19 @@ export default function AcoesPedido({ pedidoId, status, modo, limite, usuarioId 
         {modo === "etm" ? (aguardando ? "Avaliar a versão" : "Enviar mensagem") : t.titulo}
       </h2>
       {modo === "etm" && aguardando && (
-        <p className="text-sm text-muted">Aprove o vídeo ou descreva o que precisa mudar. Pode anexar imagens de referência.</p>
+        <>
+          <p className="text-sm text-muted">
+            Aprove o vídeo ou peça correções. Para apontar um momento exato, use <strong>Comentar neste ponto do vídeo</strong> no player; se preferir,
+            escreva aqui e anexe imagens de referência.
+          </p>
+          {notasPendentes > 0 && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+              {notasPendentes === 1
+                ? "1 comentário marcado no vídeo vai junto com o pedido de correção."
+                : `${notasPendentes} comentários marcados no vídeo vão junto com o pedido de correção.`}
+            </p>
+          )}
+        </>
       )}
       {modo === "igor" && (
         <p className="text-sm text-muted">

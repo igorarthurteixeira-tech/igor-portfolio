@@ -35,7 +35,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
             perguntas={abertas.map((e) => ({ id: e.id, autor: e.autor_nome, texto: e.texto, quando: e.criado_em }))}
           />
         )}
-        {!encerrado && <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="etm" limite={limite} usuarioId={user.id} />}
+        {!encerrado && <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="etm" limite={limite} usuarioId={user.id} notasPendentes={detalhe.comentarios.filter((c) => c.correcao_evento_id === null).length} />}
         <DetalhePedido {...detalhe} comTitulo={false} quem={{ id: user.id, admin: false }} />
       </div>
     </div>

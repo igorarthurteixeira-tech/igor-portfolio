@@ -17,6 +17,7 @@ import {
   megas,
   type Arquivo,
   type ArquivoEnviado,
+  type ComentarioVideo,
   type Evento,
   type Pedido,
   type ResumoPedido,
@@ -192,10 +193,11 @@ export type ArquivoComUrl = Arquivo & { url: string | null; urlBaixar: string | 
  * Pedido com a linha do tempo e os arquivos já com link (assinado por 1 hora no Supabase, ou rota protegida no Drive). */
 export async function carregarDetalhe(db: Db, id: string, comoPainel = false) {
   if (!ehUuid(id)) return null;
-  const [{ data: pedido }, { data: eventos }, { data: arquivos }] = await Promise.all([
+  const [{ data: pedido }, { data: eventos }, { data: arquivos }, { data: comentarios }] = await Promise.all([
     db.from("etm_pedidos").select("*").eq("id", id).maybeSingle(),
     db.from("etm_eventos").select("*").eq("pedido_id", id).order("criado_em", { ascending: true }),
     db.from("etm_arquivos").select("*").eq("pedido_id", id).order("criado_em", { ascending: true }),
+    db.from("etm_comentarios_video").select("*").eq("pedido_id", id).order("segundo", { ascending: true }),
   ]);
   if (!pedido) return null;
 
@@ -215,6 +217,7 @@ export async function carregarDetalhe(db: Db, id: string, comoPainel = false) {
   return {
     pedido: pedido as Pedido,
     eventos: (eventos ?? []) as Evento[],
+    comentarios: (comentarios ?? []).map((c) => ({ ...c, segundo: Number(c.segundo) })) as ComentarioVideo[],
     arquivos: lista.map((a) => {
       // arquivos do Drive passam por uma rota do próprio site, que confere o login antes de entregar
       const bloqueado = baixarBloqueado(a);

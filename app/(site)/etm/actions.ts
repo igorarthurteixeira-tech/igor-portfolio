@@ -10,6 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   BUCKET_ETM,
   chaveTipo,
+  ehVideo,
   normalizarTipo,
   permissoesMensagem,
   type ArquivoEnviado,
@@ -186,7 +187,15 @@ export async function responderPedido(
   } else {
     if (status !== "em_avaliacao") return { ok: false, erro: "Não há versão aguardando avaliação." };
     if (acao === "correcao") {
-      if (msg.length < 5) return { ok: false, erro: "Explique o que precisa ser corrigido." };
+      // a correção pode vir só dos comentários marcados nos vídeos
+      const { count: marcados } = await db
+        .from("etm_comentarios_video")
+        .select("*", { count: "exact", head: true })
+        .eq("pedido_id", pedidoId)
+        .is("correcao_evento_id", null);
+      if (msg.length < 5 && (marcados ?? 0) === 0) {
+        return { ok: false, erro: "Explique o que precisa ser corrigido ou marque momentos no vídeo." };
+      }
       novoStatus = "correcao";
     } else {
       novoStatus = "aprovado";
@@ -203,6 +212,10 @@ export async function responderPedido(
     status_novo: novoStatus,
   });
   await registrarArquivos(db, pedidoId, eventoId, "anexo", anexos);
+  // os comentários marcados no vídeo passam a pertencer a esta correção
+  if (acao === "correcao" && eventoId) {
+    await db.from("etm_comentarios_video").update({ correcao_evento_id: eventoId }).eq("pedido_id", pedidoId).is("correcao_evento_id", null);
+  }
   await atualizarPedido(db, pedidoId, novoStatus ? { status: novoStatus } : {});
 
   revalidatePath(`/etm/${pedidoId}`);
@@ -337,5 +350,82 @@ export async function excluirMensagem(eventoId: string): Promise<Resultado> {
 
   await db.from("etm_eventos").delete().eq("id", eventoId);
   atualizarTelasDoPedido(ev.pedido_id);
+  return { ok: true };
+}
+
+// ---- comentários marcados no tempo de um vídeo entregue ----
+
+/** Comentário que a pessoa pode mexer: é dela, a versão ainda está em avaliação e ele ainda não foi enviado como correção. */
+async function comentarioEditavel(db: NonNullable<ReturnType<typeof supabaseAdmin>>, id: string, userId: string) {
+  const { data: c } = await db
+    .from("etm_comentarios_video")
+    .select("id,pedido_id,autor_id,correcao_evento_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!c || c.autor_id !== userId || c.correcao_evento_id) return null;
+  const { data: p } = await db.from("etm_pedidos").select("status").eq("id", c.pedido_id).maybeSingle();
+  return p?.status === "em_avaliacao" ? (c.pedido_id as string) : null;
+}
+
+function atualizarTelasDoVideo(pedidoId: string) {
+  revalidatePath(`/etm/${pedidoId}`);
+  revalidatePath(`/admin/etm/${pedidoId}`);
+}
+
+/** Comenta um momento do vídeo entregue; vale como ponto de correção. Só enquanto a versão está em avaliação. */
+export async function comentarNoVideo(arquivoId: string, segundo: number, texto: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(arquivoId)) return { ok: false, erro: "Vídeo inválido." };
+  const seg = Math.round(Number(segundo) * 10) / 10;
+  if (!(seg >= 0 && seg <= 86400)) return { ok: false, erro: "Momento do vídeo inválido." };
+  const msg = limpar(texto, 1000);
+  if (msg.length < 1) return { ok: false, erro: "Escreva o comentário." };
+
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+  const { data: arquivo } = await db.from("etm_arquivos").select("id,pedido_id,papel,nome").eq("id", arquivoId).maybeSingle();
+  if (!arquivo || arquivo.papel !== "entrega" || !ehVideo(String(arquivo.nome))) return { ok: false, erro: "Este arquivo não aceita comentários." };
+  const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", arquivo.pedido_id).maybeSingle();
+  if (pedido?.status !== "em_avaliacao") return { ok: false, erro: "Só dá para comentar enquanto a versão está em avaliação." };
+
+  const { error } = await db.from("etm_comentarios_video").insert({
+    pedido_id: arquivo.pedido_id,
+    arquivo_id: arquivoId,
+    segundo: seg,
+    texto: msg,
+    autor_nome: user.nome,
+    autor_id: user.id,
+  });
+  if (error) return { ok: false, erro: "Não foi possível salvar o comentário." };
+  atualizarTelasDoVideo(arquivo.pedido_id as string);
+  return { ok: true };
+}
+
+export async function editarComentarioVideo(id: string, texto: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(id)) return { ok: false, erro: "Comentário inválido." };
+  const msg = limpar(texto, 1000);
+  if (msg.length < 1) return { ok: false, erro: "Escreva o comentário." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+  const pedidoId = await comentarioEditavel(db, id, user.id);
+  if (!pedidoId) return { ok: false, erro: "Este comentário não pode mais ser editado." };
+  await db.from("etm_comentarios_video").update({ texto: msg, editado_em: new Date().toISOString() }).eq("id", id);
+  atualizarTelasDoVideo(pedidoId);
+  return { ok: true };
+}
+
+export async function excluirComentarioVideo(id: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(id)) return { ok: false, erro: "Comentário inválido." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+  const pedidoId = await comentarioEditavel(db, id, user.id);
+  if (!pedidoId) return { ok: false, erro: "Este comentário não pode mais ser excluído." };
+  await db.from("etm_comentarios_video").delete().eq("id", id);
+  atualizarTelasDoVideo(pedidoId);
   return { ok: true };
 }

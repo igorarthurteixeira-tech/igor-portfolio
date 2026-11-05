@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import { tempoDeVideo as hora } from "@/lib/etm";
 
 const VELOCIDADES = [1, 1.25, 1.5, 2, 0.5];
 const ICONE = "h-5 w-5";
-
-function hora(s: number) {
-  const t = Number.isFinite(s) && s > 0 ? s : 0;
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const seg = String(Math.floor(t % 60)).padStart(2, "0");
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${seg}` : `${m}:${seg}`;
-}
 
 type Props = {
   src: string;
@@ -20,6 +13,16 @@ type Props = {
   classe?: string;
   /** Classes do vídeo (ex.: altura máxima); em tela cheia ele ocupa tudo. */
   classeVideo?: string;
+  /** Pontos com comentário, mostrados como marcas na barra de progresso. */
+  marcas?: { segundo: number; feito: boolean }[];
+  ref?: React.Ref<ControleDoPlayer>;
+};
+
+/** O que quem usa o player pode pedir a ele (ex.: o horário atual para um comentário, ou ir até um momento). */
+export type ControleDoPlayer = {
+  tempoAtual: () => number;
+  irPara: (segundos: number) => void;
+  pausar: () => void;
 };
 
 /**
@@ -27,12 +30,27 @@ type Props = {
  * translúcida, progresso em azul claro, volume, velocidade e tela cheia. Sem o botão de baixar nem o menu do
  * botão direito; o download é o botão "Baixar" do sistema, liberado só depois da aprovação.
  */
-export default function PlayerVideo({ src, autoPlay = false, classe = "", classeVideo = "w-full" }: Props) {
+export default function PlayerVideo({ src, autoPlay = false, classe = "", classeVideo = "w-full", marcas = [], ref }: Props) {
   const caixa = useRef<HTMLDivElement>(null);
   const video = useRef<HTMLVideoElement>(null);
   const barra = useRef<HTMLDivElement>(null);
   const arrastando = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      tempoAtual: () => video.current?.currentTime ?? 0,
+      irPara: (segundos) => {
+        const v = video.current;
+        if (!v) return;
+        v.currentTime = segundos;
+        v.play().catch(() => {});
+      },
+      pausar: () => video.current?.pause(),
+    }),
+    [],
+  );
 
   const [tocando, setTocando] = useState(false);
   const [fim, setFim] = useState(false);
@@ -269,6 +287,16 @@ export default function PlayerVideo({ src, autoPlay = false, classe = "", classe
           <div className="relative h-1 w-full rounded-full bg-white/25 transition-all group-hover/barra:h-1.5">
             <div className="absolute inset-y-0 left-0 rounded-full bg-white/30" style={{ width: `${pctCarregado}%` }} />
             <div className="absolute inset-y-0 left-0 rounded-full bg-accent-light" style={{ width: `${pct}%` }} />
+            {duracao > 0 &&
+              marcas.map((m, i) => (
+                <span
+                  key={`${m.segundo}-${i}`}
+                  aria-hidden
+                  title={hora(m.segundo)}
+                  className={`absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-sm ${m.feito ? "bg-emerald-400" : "bg-amber-400"}`}
+                  style={{ left: `${Math.min(100, (m.segundo / duracao) * 100)}%` }}
+                />
+              ))}
             <span
               className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 shadow transition group-hover/barra:opacity-100"
               style={{ left: `${pct}%` }}
