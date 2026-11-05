@@ -12,7 +12,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
   if (!(await getEtmUser())) redirect("/etm/login");
   const { id } = await params;
   const db = supabaseAdmin();
-  const detalhe = db ? await carregarDetalhe(db, id) : null;
+  const [detalhe, limite] = db ? await Promise.all([carregarDetalhe(db, id), limiteDeEnvio(db)]) : [null, 0];
   if (!detalhe) notFound();
 
   const encerrado = detalhe.pedido.status === "enviado" || detalhe.pedido.status === "cancelado";
@@ -23,7 +23,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
       <div className="relative z-10 mx-auto -mt-14 max-w-4xl space-y-6 px-6">
         <Link href="/etm" className="inline-block text-sm font-medium text-blue-100 hover:text-white">← Voltar aos pedidos</Link>
         <DetalhePedido {...detalhe} comTitulo={false} />
-        {!encerrado && <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="etm" limite={await limiteDeEnvio(db!)} />}
+        {!encerrado && <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="etm" limite={limite} />}
       </div>
     </div>
   );

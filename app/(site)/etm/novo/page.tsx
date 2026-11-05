@@ -11,8 +11,9 @@ export const dynamic = "force-dynamic";
 export default async function NovoPedidoPage() {
   if (!(await getEtmUser())) redirect("/etm/login");
   const db = supabaseAdmin();
-  const tipos = db ? await tiposAtivos(db) : TIPOS_PADRAO;
-  const limite = db ? await limiteDeEnvio(db) : LIMITE_ARQUIVO_ETM;
+  const [tipos, limite] = db
+    ? await Promise.all([tiposAtivos(db), limiteDeEnvio(db)])
+    : [TIPOS_PADRAO, LIMITE_ARQUIVO_ETM];
   return (
     <div className="bg-page-2 pb-24">
       <HeroEtm
