@@ -45,7 +45,8 @@ export function EtapasCompactas({ status }: { status: StatusPedido }) {
  * Linha do tempo de etapas. `compacto` reduz o tamanho, para o cabeçalho fixo do pedido.
  * `marcas` são as perguntas do pedido, cada uma no trecho entre duas etapas:
  * - em aberto: o traçado amarelo sai da etapa e PARA no círculo "?"; o resto do trecho fica apagado, porque o pedido não avança;
- * - respondida: o círculo vira verde com um visto e o trecho inteiro fica verde. Fica como registro de que houve a pergunta.
+ * - respondida: o círculo vira verde com um visto e o traçado verde vai até ele. Também para ali, e só se liga à próxima
+ *   etapa quando o pedido chega nela; aí o trecho inteiro fica verde. Fica como registro de que houve a pergunta.
  */
 export default function EtapasPedido({
   status,
@@ -79,11 +80,14 @@ export default function EtapasPedido({
         return (
           <li key={nome} className="relative flex min-w-0 flex-1 flex-col items-center text-center">
             {i > 0 &&
-              (duvida?.estado === "aberta" ? (
+              (duvida && (duvida.estado === "aberta" || !trechoPassou) ? (
                 <>
-                  {/* metade que sai da etapa anterior: amarela, até a pergunta */}
-                  <span aria-hidden className={`absolute right-full ${linha} h-0.5 w-1/2 -translate-y-1/2 bg-amber-500`} />
-                  {/* metade depois da pergunta: não continua */}
+                  {/* metade que sai da etapa anterior: amarela (aberta) ou verde (respondida), até a pergunta */}
+                  <span
+                    aria-hidden
+                    className={`absolute right-full ${linha} h-0.5 w-1/2 -translate-y-1/2 ${duvida.estado === "aberta" ? "bg-amber-500" : "bg-emerald-500"}`}
+                  />
+                  {/* metade depois da pergunta: só continua quando o pedido chega na próxima etapa */}
                   <span
                     aria-hidden
                     className={`absolute left-0 ${linha} h-0.5 w-1/2 -translate-y-1/2 ${trechoPassou ? "bg-accent-strong" : "bg-slate-200"}`}
