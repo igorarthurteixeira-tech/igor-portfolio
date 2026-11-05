@@ -232,3 +232,14 @@ export async function apagarPastaPedido(db: Db, pedidoId: string) {
     // se não der para apagar, o painel do Drive ainda permite apagar à mão
   }
 }
+
+/** Apaga um arquivo do Drive. Melhor esforço: se falhar, o arquivo continua na pasta do pedido. */
+export async function apagarArquivoDrive(db: Db, driveId: string) {
+  try {
+    const acesso = await acessoDrive(db);
+    if (!acesso) return;
+    await fetch(`${API}/files/${encodeURIComponent(driveId)}`, { method: "DELETE", headers: cabecalho(acesso) });
+  } catch {
+    // o arquivo pode ser apagado à mão na conta do Drive
+  }
+}

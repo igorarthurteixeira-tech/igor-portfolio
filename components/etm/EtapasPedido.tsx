@@ -41,14 +41,17 @@ export function EtapasCompactas({ status }: { status: StatusPedido }) {
   );
 }
 
-/** Linha do tempo completa de etapas, para a página do pedido. */
-export default function EtapasPedido({ status }: { status: StatusPedido }) {
+/** Linha do tempo de etapas. `compacto` reduz o tamanho, para o cabeçalho fixo do pedido. */
+export default function EtapasPedido({ status, compacto = false }: { status: StatusPedido; compacto?: boolean }) {
   const atual = etapaAtual(status);
   if (atual < 0) {
-    return <p className="rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-600">Este pedido foi cancelado.</p>;
+    return <p className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">Este pedido foi cancelado.</p>;
   }
   const alerta = status === "em_avaliacao" || status === "correcao";
   const finalizado = status === "enviado";
+  const bolinha = compacto ? "h-6 w-6 text-[10px]" : "h-8 w-8 text-xs";
+  const linha = compacto ? "top-3" : "top-4";
+  const icone = compacto ? "h-3 w-3" : "h-4 w-4";
 
   return (
     <ol className="flex items-start" aria-label="Etapas do pedido">
@@ -60,11 +63,11 @@ export default function EtapasPedido({ status }: { status: StatusPedido }) {
             {i > 0 && (
               <span
                 aria-hidden
-                className={`absolute right-1/2 top-4 h-0.5 w-full -translate-y-1/2 ${i <= atual ? "bg-accent-strong" : "bg-slate-200"}`}
+                className={`absolute right-1/2 ${linha} h-0.5 w-full -translate-y-1/2 ${i <= atual ? "bg-accent-strong" : "bg-slate-200"}`}
               />
             )}
             <span
-              className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
+              className={`relative z-10 flex ${bolinha} items-center justify-center rounded-full font-bold transition ${
                 feita
                   ? "bg-accent-strong text-white"
                   : aqui
@@ -75,14 +78,16 @@ export default function EtapasPedido({ status }: { status: StatusPedido }) {
               }`}
             >
               {feita ? (
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg viewBox="0 0 24 24" className={icone} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <path d="M5 12.5l4.5 4.5L19 7.5" />
                 </svg>
               ) : (
                 i + 1
               )}
             </span>
-            <span className={`mt-2 text-[11px] font-semibold sm:text-xs ${aqui ? "text-fg" : feita ? "text-slate-600" : "text-slate-400"}`}>
+            <span
+              className={`${compacto ? "mt-1 text-[10px]" : "mt-2 text-[11px] sm:text-xs"} font-semibold ${aqui ? "text-fg" : feita ? "text-slate-600" : "text-slate-400"}`}
+            >
               {aqui && status === "correcao" ? "Em correção" : nome}
             </span>
           </li>

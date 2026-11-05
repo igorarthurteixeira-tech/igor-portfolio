@@ -4,10 +4,19 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-import { renomearPastaPedido } from "@/lib/drive";
+import { apagarArquivoDrive, renomearPastaPedido } from "@/lib/drive";
 import { permitir } from "@/lib/rate-limit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { chaveTipo, normalizarTipo, type ArquivoEnviado, type StatusPedido, type TipoVideo } from "@/lib/etm";
+import {
+  BUCKET_ETM,
+  chaveTipo,
+  normalizarTipo,
+  permissoesMensagem,
+  type ArquivoEnviado,
+  type Evento,
+  type StatusPedido,
+  type TipoVideo,
+} from "@/lib/etm";
 import {
   atualizarPedido,
   criarEvento,
@@ -188,6 +197,7 @@ export async function responderPedido(
     pedido_id: pedidoId,
     autor: "etm",
     autor_nome: user.nome,
+    autor_id: user.id,
     tipo: acao === "comentar" ? "comentario" : acao === "correcao" ? "correcao" : "aprovacao",
     texto: msg,
     status_novo: novoStatus,
@@ -246,6 +256,7 @@ export async function responderDuvida(pedidoId: string, duvidaId: string, texto:
     pedido_id: pedidoId,
     autor: "etm",
     autor_nome: user.nome,
+    autor_id: user.id,
     tipo: "resposta",
     texto: msg,
     responde_a: duvidaId,
@@ -255,5 +266,66 @@ export async function responderDuvida(pedidoId: string, duvidaId: string, texto:
   revalidatePath(`/admin/etm/${pedidoId}`);
   revalidatePath("/etm");
   revalidatePath("/admin", "layout");
+  return { ok: true };
+}
+
+type EventoMexido = Pick<Evento, "id" | "pedido_id" | "tipo" | "autor" | "autor_id">;
+
+function atualizarTelasDoPedido(pedidoId: string) {
+  revalidatePath(`/etm/${pedidoId}`);
+  revalidatePath(`/admin/etm/${pedidoId}`);
+  revalidatePath("/etm");
+  revalidatePath("/admin", "layout");
+}
+
+/** Edita o texto de uma mensagem, pergunta ou resposta. Só quem escreveu (ou o dono do painel, nas dele) pode. */
+export async function editarMensagem(eventoId: string, texto: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(eventoId)) return { ok: false, erro: "Mensagem inválida." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+
+  const { data } = await db.from("etm_eventos").select("id,pedido_id,tipo,autor,autor_id").eq("id", eventoId).maybeSingle();
+  const ev = data as EventoMexido | null;
+  if (!ev || !permissoesMensagem(ev, { id: user.id, admin: user.admin }).editar) {
+    return { ok: false, erro: "Você não pode editar esta mensagem." };
+  }
+  const msg = limpar(texto, 4000);
+  if (msg.length < (ev.tipo === "duvida" ? 5 : 2)) {
+    return { ok: false, erro: ev.tipo === "duvida" ? "Escreva a pergunta." : "Escreva a mensagem." };
+  }
+  await db.from("etm_eventos").update({ texto: msg, editado_em: new Date().toISOString() }).eq("id", eventoId);
+  atualizarTelasDoPedido(ev.pedido_id);
+  return { ok: true };
+}
+
+/**
+ * Exclui uma mensagem, pergunta ou resposta, com os arquivos anexados a ela. Apagar uma pergunta apaga as respostas;
+ * apagar uma resposta devolve a pergunta ao estado de "sem resposta".
+ */
+export async function excluirMensagem(eventoId: string): Promise<Resultado> {
+  const user = await getEtmUser();
+  if (!user) return { ok: false, erro: "Sem permissão." };
+  if (!ehUuid(eventoId)) return { ok: false, erro: "Mensagem inválida." };
+  const db = supabaseAdmin();
+  if (!db) return { ok: false, erro: "Serviço indisponível." };
+
+  const { data } = await db.from("etm_eventos").select("id,pedido_id,tipo,autor,autor_id").eq("id", eventoId).maybeSingle();
+  const ev = data as EventoMexido | null;
+  if (!ev || !permissoesMensagem(ev, { id: user.id, admin: user.admin }).excluir) {
+    return { ok: false, erro: "Você não pode excluir esta mensagem." };
+  }
+
+  const { data: filhas } = await db.from("etm_eventos").select("id").eq("responde_a", eventoId);
+  const ids = [eventoId, ...(filhas ?? []).map((f) => f.id as string)];
+  const { data: anexos } = await db.from("etm_arquivos").select("caminho").in("evento_id", ids);
+  const caminhos = (anexos ?? []).map((a) => a.caminho as string);
+  const doStorage = caminhos.filter((c) => !c.startsWith("drive:"));
+  if (doStorage.length) await db.storage.from(BUCKET_ETM).remove(doStorage);
+  for (const c of caminhos.filter((c) => c.startsWith("drive:"))) await apagarArquivoDrive(db, c.slice("drive:".length));
+
+  await db.from("etm_eventos").delete().eq("id", eventoId);
+  atualizarTelasDoPedido(ev.pedido_id);
   return { ok: true };
 }

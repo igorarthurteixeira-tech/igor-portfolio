@@ -82,6 +82,9 @@ export type Evento = {
   link: string | null;
   /** Numa resposta, o id da pergunta que ela responde. */
   responde_a: string | null;
+  /** Quem escreveu (usuário do sistema); vazio nos registros antigos. */
+  autor_id: string | null;
+  editado_em: string | null;
   criado_em: string;
 };
 
@@ -266,3 +269,19 @@ export const MIME_ETM: Record<string, string> = {
 };
 
 export const megas = (bytes: number) => Math.round(bytes / 1024 / 1024);
+
+const EDITAVEIS: Evento["tipo"][] = ["comentario", "duvida", "resposta"];
+
+/**
+ * Quem pode mexer numa mensagem, pergunta ou resposta (os registros do fluxo, como "versão entregue", ficam de fora):
+ * cada pessoa edita e exclui as próprias; o dono do painel também edita as dele (inclusive as antigas, sem `autor_id`)
+ * e exclui qualquer uma.
+ */
+export function permissoesMensagem(
+  e: Pick<Evento, "tipo" | "autor" | "autor_id">,
+  quem?: { id: string; admin: boolean },
+) {
+  if (!quem || !EDITAVEIS.includes(e.tipo)) return { editar: false, excluir: false };
+  const minha = e.autor_id === quem.id || (quem.admin && e.autor === "igor");
+  return { editar: minha, excluir: minha || quem.admin };
+}

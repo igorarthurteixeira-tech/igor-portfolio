@@ -8,11 +8,12 @@ import {
   tamanhoLegivel,
   youtubeId,
   perguntasAbertas,
+  permissoesMensagem,
   type Evento,
   type Pedido,
 } from "@/lib/etm";
 import type { ArquivoComUrl } from "@/lib/etm-servidor";
-import EtapasPedido from "./EtapasPedido";
+import MensagemEditavel from "./MensagemEditavel";
 
 export function SeloStatus({ status }: { status: Pedido["status"] }) {
   return (
@@ -117,8 +118,11 @@ export default function DetalhePedido({
   eventos,
   arquivos,
   comTitulo = true,
+  quem,
 }: {
   comTitulo?: boolean;
+  /** Quem está olhando a página: define quais mensagens ele pode editar ou excluir. */
+  quem?: { id: string; admin: boolean };
   pedido: Pedido;
   eventos: Evento[];
   arquivos: ArquivoComUrl[];
@@ -135,17 +139,8 @@ export default function DetalhePedido({
   return (
     <div className="space-y-6">
       <div className="card p-6 sm:p-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-muted">Pedido #{pedido.numero}</span>
-          <SeloStatus status={pedido.status} />
-          {pedido.urgente && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">Urgente</span>}
-        </div>
-        {comTitulo && <h1 className="mt-3 text-2xl font-bold tracking-tight text-fg sm:text-3xl">{pedido.titulo}</h1>}
-        <p className="mt-2 text-sm text-muted">{STATUS[pedido.status].dica}</p>
-
-        <div className="mt-6 rounded-xl bg-page px-3 py-5 sm:px-6">
-          <EtapasPedido status={pedido.status} />
-        </div>
+        {comTitulo && <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">{pedido.titulo}</h1>}
+        <p className={`${comTitulo ? "mt-2 " : ""}text-sm text-muted`}>{STATUS[pedido.status].dica}</p>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-4">
           {info.map(([k, v]) => (
@@ -168,7 +163,9 @@ export default function DetalhePedido({
       <div>
         <h2 className="mb-3 text-lg font-bold tracking-tight text-fg">Andamento</h2>
         <ol className="space-y-4">
-          {[...eventos].reverse().map((e) => (
+          {[...eventos].reverse().map((e) => {
+            const perm = permissoesMensagem(e, quem);
+            return (
             <li key={e.id} className={`card border-l-4 p-5 ${COR_BORDA[e.tipo]} ${abertas.has(e.id) ? "bg-amber-50" : ""}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <p className="font-semibold text-fg">
@@ -179,13 +176,26 @@ export default function DetalhePedido({
                 </p>
                 <p className="text-xs text-muted">
                   {e.autor_nome} · {dataHora(e.criado_em)}
+                  {e.editado_em ? " · editada" : ""}
                 </p>
               </div>
-              {e.texto && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-fg">{e.texto}</p>}
+              {perm.editar || perm.excluir ? (
+                <MensagemEditavel
+                  eventoId={e.id}
+                  tipo={e.tipo}
+                  texto={e.texto}
+                  podeEditar={perm.editar}
+                  podeExcluir={perm.excluir}
+                  temArquivos={arquivos.some((a) => a.evento_id === e.id)}
+                />
+              ) : (
+                e.texto && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-fg">{e.texto}</p>
+              )}
               {e.link && <LinkOuPlayer link={e.link} titulo={titulo(e)} />}
               <Arquivos itens={arquivos.filter((a) => a.evento_id === e.id)} />
             </li>
-          ))}
+            );
+          })}
         </ol>
       </div>
     </div>

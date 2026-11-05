@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { carregarDetalhe, limiteDeEnvio } from "@/lib/etm-servidor";
+import CabecalhoPedido from "@/components/etm/CabecalhoPedido";
 import DetalhePedido from "@/components/etm/DetalhePedido";
 import AcoesPedido from "@/components/etm/AcoesPedido";
 import ExcluirPedido from "@/components/admin/ExcluirPedido";
@@ -24,8 +25,9 @@ export default async function AdminPedidoEtmPage({ params }: { params: Promise<{
           <Link href="/admin/etm" className="text-sm font-medium text-muted hover:text-fg">← Voltar aos pedidos</Link>
           <ExcluirPedido id={id} />
         </div>
+        <CabecalhoPedido pedido={detalhe.pedido} topo="top-32" />
         <AcoesPedido pedidoId={id} status={detalhe.pedido.status} modo="igor" limite={limite} usuarioId={user.id} />
-        <DetalhePedido {...detalhe} />
+        <DetalhePedido {...detalhe} quem={{ id: user.id, admin: true }} />
       </div>
     </section>
   );
