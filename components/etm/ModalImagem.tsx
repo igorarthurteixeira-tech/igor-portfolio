@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const CORES = [
   { nome: "Vermelho", valor: "#ef4444" },
@@ -189,7 +190,8 @@ export default function ModalImagem({ arquivo, modoInicial, onFechar, onMarcada 
 
   const botao = "rounded-lg border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-40";
 
-  return (
+  // fora do bloco da página: ali dentro o menu fixo do site ficaria por cima da janela
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -286,6 +288,7 @@ export default function ModalImagem({ arquivo, modoInicial, onFechar, onMarcada 
           </p>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

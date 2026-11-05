@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ehImagem, ehPdf, ehVideo, type ComentarioVideo } from "@/lib/etm";
 import PlayerVideo from "./PlayerVideo";
 import VideoComentavel from "./VideoComentavel";
@@ -55,7 +56,9 @@ export default function AbrirArquivo({
         {children}
       </button>
 
-      {aberto && (
+      {aberto &&
+        // fora do bloco da página: ali dentro o menu fixo do site ficaria por cima da janela e esconderia os botões
+        createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -64,7 +67,19 @@ export default function AbrirArquivo({
           onMouseDown={(e) => e.target === e.currentTarget && setAberto(false)}
         >
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-            <p className="min-w-0 truncate text-sm font-semibold text-white">{nome}</p>
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setAberto(false)}
+                className="flex shrink-0 items-center gap-2 rounded-lg border border-white/30 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M19 12H5M11 6l-6 6 6 6" />
+                </svg>
+                Voltar
+              </button>
+              <p className="min-w-0 truncate text-sm font-semibold text-white">{nome}</p>
+            </div>
             <div className="flex gap-2">
               {urlBaixar && (
                 <a href={urlBaixar} className="rounded-lg border border-white/25 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
@@ -74,8 +89,11 @@ export default function AbrirArquivo({
               <button
                 type="button"
                 onClick={() => setAberto(false)}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#050f3d] hover:bg-blue-100"
+                className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#050f3d] hover:bg-blue-100"
               >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
                 Fechar
               </button>
             </div>
@@ -112,8 +130,9 @@ export default function AbrirArquivo({
               ))}
             {ehPdf(nome) && <iframe src={url} title={nome} className="h-full w-full max-w-5xl rounded-lg bg-white shadow-2xl" />}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }

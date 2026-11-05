@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { TipoVideo } from "@/lib/etm";
 import { criarTipo } from "@/app/(site)/etm/actions";
 
@@ -43,7 +44,8 @@ export default function ModalNovoTipo({
     onCriado(r.tipo);
   }
 
-  return (
+  // fora do bloco da página: ali dentro o menu fixo do site ficaria por cima da janela
+  return createPortal(
     <div
       className="fixed inset-0 z-[90] flex items-end justify-center bg-[#050f3d]/60 p-4 sm:items-center"
       onMouseDown={(e) => e.target === e.currentTarget && !salvando && onFechar()}
@@ -101,6 +103,7 @@ export default function ModalNovoTipo({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
