@@ -25,7 +25,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
   // O que quem produz mandou (versões entregues e anexos dele) só pode ser levado depois da aprovação; o painel não tem limite.
   // Antes disso o arquivo só vai para o player e para as imagens do próprio sistema, e nunca para o botão de baixar
   // nem para quem abre o endereço direto na barra do navegador e usa "Salvar como" (o navegador informa o destino em Sec-Fetch-Dest).
-  if (!user.admin) {
+  const comoCliente = !user.admin || new URL(request.url).searchParams.get("area") === "etm";
+  if (comoCliente) {
     const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", arquivo.pedido_id).maybeSingle();
     if (pedido?.status !== "aprovado" && pedido?.status !== "enviado") {
       let deQuemProduz = arquivo.papel === "entrega";

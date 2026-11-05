@@ -17,9 +17,6 @@ export default async function EtmLayout({ children }: { children: React.ReactNod
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-2.5 text-sm">
             <Link href="/etm" className="font-semibold text-fg">Pedidos de vídeo · ETM</Link>
             <div className="flex items-center gap-4">
-              {user.admin && (
-                <Link href="/admin/etm" className="font-semibold text-accent-strong hover:underline">Voltar ao painel</Link>
-              )}
               <span className="hidden text-muted sm:inline">{user.nome}</span>
               <form action={sairEtm}>
                 <button className="font-medium text-muted hover:text-fg">Sair</button>
