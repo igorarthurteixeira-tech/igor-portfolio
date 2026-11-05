@@ -1,11 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { apagarArquivoDrive, renomearPastaPedido } from "@/lib/drive";
-import { permitir } from "@/lib/rate-limit";
+import { limiteCadastro, loginBloqueado, loginDeuCerto, loginFalhou } from "@/lib/limite-tentativas";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   BUCKET_ETM,
@@ -42,8 +41,12 @@ export async function entrarEtm(
 
   const email = String(formData.get("email") ?? "").trim();
   const senha = String(formData.get("senha") ?? "");
+  // excesso de tentativas: bloqueia antes mesmo de conferir a senha
+  const bloqueio = await loginBloqueado(email);
+  if (bloqueio) return { erro: bloqueio };
   const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
-  if (error) return { erro: "E-mail ou senha incorretos." };
+  if (error) return { erro: await loginFalhou(email) };
+  await loginDeuCerto(email);
 
   if (!(await getEtmUser())) {
     const { data } = await supabase.auth.getUser();
@@ -61,8 +64,11 @@ export async function cadastrarEtm(
   _estado: { erro?: string; ok?: boolean },
   formData: FormData,
 ): Promise<{ erro?: string; ok?: boolean }> {
-  const req = new Request("http://local", { headers: await headers() });
-  if (!permitir(req, "etm-cadastro", 5, 60 * 60 * 1000)) return { erro: "Muitas tentativas. Tente de novo mais tarde." };
+  // Armadilhas para robôs: o campo "site" fica escondido (uma pessoa nunca o preenche) e o formulário não é
+  // enviado em menos de 2 s depois de aberto. No primeiro caso respondemos "ok" sem criar nada, para o robô não aprender.
+  if (limpar(formData.get("site"), 100)) return { ok: true };
+  const aberto = Number(formData.get("iniciado"));
+  if (!aberto || Date.now() - aberto < 2000) return { erro: "Confira os dados e envie de novo em alguns segundos." };
 
   const nome = limpar(formData.get("nome"), 80);
   const email = limpar(formData.get("email"), 120).toLowerCase();
@@ -71,6 +77,10 @@ export async function cadastrarEtm(
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { erro: "E-mail inválido." };
   if (email === process.env.ADMIN_EMAIL?.toLowerCase()) return { erro: "Este e-mail não pode ser usado." };
   if (senha.length < 8) return { erro: "A senha precisa de pelo menos 8 caracteres." };
+
+  // limite de contas por IP, por e-mail e no total do site
+  const bloqueio = await limiteCadastro(email);
+  if (bloqueio) return { erro: bloqueio };
 
   const db = supabaseAdmin();
   if (!db) return { erro: "Serviço indisponível." };

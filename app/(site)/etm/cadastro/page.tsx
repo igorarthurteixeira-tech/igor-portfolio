@@ -1,13 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import BrilhosEtm from "@/components/etm/BrilhosEtm";
 import PainelApresentacao from "@/components/etm/PainelApresentacao";
 import { cadastrarEtm } from "../actions";
 
 export default function EtmCadastroPage() {
   const [estado, acao, pendente] = useActionState(cadastrarEtm, {});
+  // hora em que o formulário abriu: o servidor recusa envios rápidos demais (robôs)
+  const campoInicio = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (campoInicio.current) campoInicio.current.value = String(Date.now());
+  }, []);
 
   return (
     <section className="relative isolate flex min-h-[85vh] items-center overflow-hidden fundo-etm px-6 py-16">
@@ -33,6 +38,14 @@ export default function EtmCadastroPage() {
           ) : (
             <>
               <form action={acao} className="card space-y-4 p-7 shadow-2xl shadow-black/40">
+                <input ref={campoInicio} type="hidden" name="iniciado" defaultValue="" />
+                {/* armadilha para robôs: escondido de quem usa a tela, mas um robô preenche */}
+                <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                  <label>
+                    Não preencha este campo
+                    <input type="text" name="site" tabIndex={-1} autoComplete="off" defaultValue="" />
+                  </label>
+                </div>
                 <div>
                   <h2 className="text-xl font-bold tracking-tight text-fg">Criar cadastro</h2>
                   <p className="mt-1 text-sm text-muted">Depois de enviar, seu acesso fica aguardando aprovação.</p>

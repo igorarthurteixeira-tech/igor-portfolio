@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getAdminUser, supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { loginBloqueado, loginDeuCerto, loginFalhou } from "@/lib/limite-tentativas";
 
 export async function entrar(
   _estado: { erro?: string },
@@ -14,11 +15,15 @@ export async function entrar(
 
   const email = String(formData.get("email") ?? "").trim();
   const senha = String(formData.get("senha") ?? "");
+  // excesso de tentativas: bloqueia antes mesmo de conferir a senha
+  const bloqueio = await loginBloqueado(email);
+  if (bloqueio) return { erro: bloqueio };
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password: senha,
   });
-  if (error) return { erro: "E-mail ou senha incorretos." };
+  if (error) return { erro: await loginFalhou(email) };
+  await loginDeuCerto(email);
 
   if (!(await getAdminUser())) {
     await supabase.auth.signOut();
