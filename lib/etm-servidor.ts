@@ -187,7 +187,8 @@ export async function atualizarPedido(db: Db, id: string, campos: Record<string,
 export type ArquivoComUrl = Arquivo & { url: string | null; urlBaixar: string | null };
 
 /**
- * Em correção, a versão entregue ainda não vale: quem não é o painel não recebe o link de download dela.
+ * O que quem produz mandou (versões entregues e anexos dele) só pode ser baixado depois da aprovação:
+ * antes disso, quem não é o painel não recebe o link de download.
  * Pedido com a linha do tempo e os arquivos já com link (assinado por 1 hora no Supabase, ou rota protegida no Drive). */
 export async function carregarDetalhe(db: Db, id: string, admin = false) {
   if (!ehUuid(id)) return null;
@@ -201,7 +202,11 @@ export async function carregarDetalhe(db: Db, id: string, admin = false) {
   const lista = (arquivos ?? []) as Arquivo[];
   const noDrive = (a: Arquivo) => a.caminho.startsWith("drive:");
   const urls = new Map<string, string>();
-  const baixarBloqueado = (a: Arquivo) => !admin && a.papel === "entrega" && (pedido as Pedido).status === "correcao";
+  const autorDoEvento = new Map((eventos ?? []).map((e) => [e.id as string, e.autor as string]));
+  const status = (pedido as Pedido).status;
+  const liberado = status === "aprovado" || status === "enviado";
+  const baixarBloqueado = (a: Arquivo) =>
+    !admin && !liberado && (a.papel === "entrega" || autorDoEvento.get(a.evento_id ?? "") === "igor");
   const doStorage = lista.filter((a) => !noDrive(a));
   if (doStorage.length) {
     const { data } = await db.storage.from(BUCKET_ETM).createSignedUrls(doStorage.map((a) => a.caminho), 3600);

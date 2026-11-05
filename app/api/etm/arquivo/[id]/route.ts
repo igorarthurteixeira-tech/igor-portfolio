@@ -19,13 +19,30 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
 
   const db = supabaseAdmin();
   if (!db) return new Response("Serviço indisponível.", { status: 503 });
-  const { data: arquivo } = await db.from("etm_arquivos").select("caminho,nome,papel,pedido_id").eq("id", id).maybeSingle();
+  const { data: arquivo } = await db.from("etm_arquivos").select("caminho,nome,papel,pedido_id,evento_id").eq("id", id).maybeSingle();
   if (!arquivo || !String(arquivo.caminho).startsWith("drive:")) return new Response("Arquivo não encontrado.", { status: 404 });
 
-  // em correção, a versão entregue não pode ser baixada (o painel pode); assistir no player continua liberado
-  if (new URL(request.url).searchParams.get("baixar") === "1" && arquivo.papel === "entrega" && !user.admin) {
+  // O que quem produz mandou (versões entregues e anexos dele) só pode ser levado depois da aprovação; o painel não tem limite.
+  // Antes disso o arquivo só vai para o player e para as imagens do próprio sistema, e nunca para o botão de baixar
+  // nem para quem abre o endereço direto na barra do navegador e usa "Salvar como" (o navegador informa o destino em Sec-Fetch-Dest).
+  if (!user.admin) {
     const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", arquivo.pedido_id).maybeSingle();
-    if (pedido?.status === "correcao") return new Response("Download indisponível durante a correção.", { status: 403 });
+    if (pedido?.status !== "aprovado" && pedido?.status !== "enviado") {
+      let deQuemProduz = arquivo.papel === "entrega";
+      if (!deQuemProduz && arquivo.evento_id) {
+        const { data: evento } = await db.from("etm_eventos").select("autor").eq("id", arquivo.evento_id).maybeSingle();
+        deQuemProduz = evento?.autor === "igor";
+      }
+      if (deQuemProduz) {
+        if (new URL(request.url).searchParams.get("baixar") === "1") {
+          return new Response("O download é liberado depois da aprovação.", { status: 403 });
+        }
+        const destino = request.headers.get("sec-fetch-dest");
+        if (destino && destino !== "video" && destino !== "image") {
+          return new Response("Este arquivo só pode ser visto dentro do sistema até a aprovação.", { status: 403 });
+        }
+      }
+    }
   }
 
   let acesso: string | null;

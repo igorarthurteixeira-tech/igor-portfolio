@@ -18,6 +18,7 @@ import {
 } from "@/lib/etm";
 import type { ArquivoComUrl } from "@/lib/etm-servidor";
 import AbrirArquivo from "./AbrirArquivo";
+import { ImagemProtegida, VideoProtegido } from "./MidiaProtegida";
 import MensagemEditavel from "./MensagemEditavel";
 
 export function SeloStatus({ status, visao = "etm" }: { status: Pedido["status"]; visao?: Visao }) {
@@ -64,22 +65,15 @@ function Arquivos({ itens }: { itens: ArquivoComUrl[] }) {
     <ul className="mt-3 grid gap-3 sm:grid-cols-2">
       {itens.map((a) => {
         const abre = !!a.url && (ehVideo(a.nome) || ehImagem(a.nome) || ehPdf(a.nome));
-        // entrega sem link de download = download bloqueado (pedido em correção)
-        const bloqueado = a.papel === "entrega" && !a.urlBaixar;
+        // sem link de download = bloqueado (o que quem produz mandou só baixa depois da aprovação)
+        const bloqueado = !!a.url && !a.urlBaixar;
         return (
           <li key={a.id} className="overflow-hidden rounded-xl border border-line bg-page">
             {a.url && ehVideo(a.nome) ? (
-              <video
-                controls
-                preload="metadata"
-                src={a.url}
-                controlsList={bloqueado ? "nodownload" : undefined}
-                className="max-h-96 w-full bg-black"
-              />
+              <VideoProtegido src={a.url} className="max-h-96 w-full bg-black" />
             ) : a.url && ehImagem(a.nome) ? (
               <AbrirArquivo url={a.url} nome={a.nome} urlBaixar={a.urlBaixar} className="block w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.url} alt={a.nome} loading="lazy" className="max-h-72 w-full bg-black object-contain" />
+                <ImagemProtegida src={a.url} alt={a.nome} className="max-h-72 w-full bg-black object-contain" />
               </AbrirArquivo>
             ) : null}
             <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
@@ -96,7 +90,7 @@ function Arquivos({ itens }: { itens: ArquivoComUrl[] }) {
                     Baixar
                   </a>
                 ) : bloqueado ? (
-                  <span className="text-slate-400" title="O download volta depois da aprovação">Download indisponível</span>
+                  <span className="text-slate-400" title="O download fica disponível depois que o pedido for aprovado">Download após a aprovação</span>
                 ) : null}
               </span>
             </div>

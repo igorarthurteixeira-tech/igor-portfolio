@@ -69,14 +69,21 @@ export default function AbrirArquivo({
           <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto" onMouseDown={(e) => e.target === e.currentTarget && setAberto(false)}>
             {ehImagem(nome) && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={url} alt={nome} className="max-h-full max-w-full rounded-lg object-contain shadow-2xl" />
+              <img
+                src={url}
+                alt={nome}
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                className="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl"
+              />
             )}
             {ehVideo(nome) && (
               <video
                 src={url}
                 controls
                 autoPlay
-                controlsList={urlBaixar ? undefined : "nodownload"}
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
                 className="max-h-full max-w-full rounded-lg bg-black shadow-2xl"
               />
             )}
