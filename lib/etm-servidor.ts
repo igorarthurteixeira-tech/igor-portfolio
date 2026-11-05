@@ -186,8 +186,10 @@ export async function atualizarPedido(db: Db, id: string, campos: Record<string,
 
 export type ArquivoComUrl = Arquivo & { url: string | null; urlBaixar: string | null };
 
-/** Pedido com a linha do tempo e os arquivos já com link (assinado por 1 hora no Supabase, ou rota protegida no Drive). */
-export async function carregarDetalhe(db: Db, id: string) {
+/**
+ * Em correção, a versão entregue ainda não vale: quem não é o painel não recebe o link de download dela.
+ * Pedido com a linha do tempo e os arquivos já com link (assinado por 1 hora no Supabase, ou rota protegida no Drive). */
+export async function carregarDetalhe(db: Db, id: string, admin = false) {
   if (!ehUuid(id)) return null;
   const [{ data: pedido }, { data: eventos }, { data: arquivos }] = await Promise.all([
     db.from("etm_pedidos").select("*").eq("id", id).maybeSingle(),
@@ -199,6 +201,7 @@ export async function carregarDetalhe(db: Db, id: string) {
   const lista = (arquivos ?? []) as Arquivo[];
   const noDrive = (a: Arquivo) => a.caminho.startsWith("drive:");
   const urls = new Map<string, string>();
+  const baixarBloqueado = (a: Arquivo) => !admin && a.papel === "entrega" && (pedido as Pedido).status === "correcao";
   const doStorage = lista.filter((a) => !noDrive(a));
   if (doStorage.length) {
     const { data } = await db.storage.from(BUCKET_ETM).createSignedUrls(doStorage.map((a) => a.caminho), 3600);
@@ -209,9 +212,10 @@ export async function carregarDetalhe(db: Db, id: string) {
     eventos: (eventos ?? []) as Evento[],
     arquivos: lista.map((a) => {
       // arquivos do Drive passam por uma rota do próprio site, que confere o login antes de entregar
-      if (noDrive(a)) return { ...a, url: `/api/etm/arquivo/${a.id}`, urlBaixar: `/api/etm/arquivo/${a.id}?baixar=1` };
+      const bloqueado = baixarBloqueado(a);
+      if (noDrive(a)) return { ...a, url: `/api/etm/arquivo/${a.id}`, urlBaixar: bloqueado ? null : `/api/etm/arquivo/${a.id}?baixar=1` };
       const url = urls.get(a.caminho) ?? null;
-      return { ...a, url, urlBaixar: url ? `${url}&download=${encodeURIComponent(a.nome)}` : null };
+      return { ...a, url, urlBaixar: url && !bloqueado ? `${url}&download=${encodeURIComponent(a.nome)}` : null };
     }) as ArquivoComUrl[],
   };
 }

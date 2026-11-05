@@ -132,6 +132,7 @@ const EH_VIDEO = /\.(mp4|mov|m4v)$/i;
 const EH_IMAGEM = /\.(jpe?g|png|webp)$/i;
 export const ehVideo = (nome: string) => EH_VIDEO.test(nome);
 export const ehImagem = (nome: string) => EH_IMAGEM.test(nome);
+export const ehPdf = (nome: string) => /\.pdf$/i.test(nome);
 
 const FUSO = "America/Sao_Paulo";
 
@@ -315,4 +316,18 @@ export function marcasDeDuvida(eventos: Evento[]): MarcaDuvida[] {
     }
   }
   return [...porEtapa].map(([et, estado]) => ({ etapa: et, estado }));
+}
+
+/** Quem está olhando: a ETM (quem pede e avalia) ou o painel (quem produz). Alguns status mudam de texto conforme a visão. */
+export type Visao = "etm" | "igor";
+
+export function rotuloStatus(status: StatusPedido, visao: Visao = "etm") {
+  // quem avalia é o cliente: para o painel, o pedido "aguarda a avaliação do cliente", e não a sua
+  if (visao === "igor" && status === "em_avaliacao") return "Aguardando avaliação do cliente";
+  return STATUS[status].rotulo;
+}
+
+export function dicaStatus(status: StatusPedido, visao: Visao = "etm") {
+  if (visao === "igor" && status === "em_avaliacao") return "A versão foi entregue e aguarda a avaliação do cliente.";
+  return STATUS[status].dica;
 }

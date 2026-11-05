@@ -12,14 +12,21 @@ export const maxDuration = 60;
  * Aceita pedidos de trecho (Range), que o player usa para avançar o vídeo.
  */
 export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
-  if (!(await getEtmUser())) return new Response("Não autorizado.", { status: 401 });
+  const user = await getEtmUser();
+  if (!user) return new Response("Não autorizado.", { status: 401 });
   const { id } = await ctx.params;
   if (!ehUuid(id)) return new Response("Arquivo não encontrado.", { status: 404 });
 
   const db = supabaseAdmin();
   if (!db) return new Response("Serviço indisponível.", { status: 503 });
-  const { data: arquivo } = await db.from("etm_arquivos").select("caminho,nome").eq("id", id).maybeSingle();
+  const { data: arquivo } = await db.from("etm_arquivos").select("caminho,nome,papel,pedido_id").eq("id", id).maybeSingle();
   if (!arquivo || !String(arquivo.caminho).startsWith("drive:")) return new Response("Arquivo não encontrado.", { status: 404 });
+
+  // em correção, a versão entregue não pode ser baixada (o painel pode); assistir no player continua liberado
+  if (new URL(request.url).searchParams.get("baixar") === "1" && arquivo.papel === "entrega" && !user.admin) {
+    const { data: pedido } = await db.from("etm_pedidos").select("status").eq("id", arquivo.pedido_id).maybeSingle();
+    if (pedido?.status === "correcao") return new Response("Download indisponível durante a correção.", { status: 403 });
+  }
 
   let acesso: string | null;
   try {

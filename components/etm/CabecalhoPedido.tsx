@@ -1,4 +1,4 @@
-import type { MarcaDuvida, Pedido } from "@/lib/etm";
+import type { MarcaDuvida, Pedido, Visao } from "@/lib/etm";
 import { SeloStatus } from "./DetalhePedido";
 import EtapasPedido from "./EtapasPedido";
 
@@ -7,7 +7,17 @@ import EtapasPedido from "./EtapasPedido";
  * `marcas` mostram na linha as perguntas do pedido: em aberto (parada) ou respondidas (verde).
  * `topo` é a distância até as barras fixas do site (classe do Tailwind, escrita por inteiro em quem usa).
  */
-export default function CabecalhoPedido({ pedido, topo, marcas = [] }: { pedido: Pedido; topo: string; marcas?: MarcaDuvida[] }) {
+export default function CabecalhoPedido({
+  pedido,
+  topo,
+  marcas = [],
+  visao = "etm",
+}: {
+  pedido: Pedido;
+  topo: string;
+  marcas?: MarcaDuvida[];
+  visao?: Visao;
+}) {
   return (
     <div className={`sticky z-30 ${topo}`}>
       <div className="card px-4 py-3 shadow-lg shadow-slate-900/10 sm:px-6">
@@ -19,7 +29,7 @@ export default function CabecalhoPedido({ pedido, topo, marcas = [] }: { pedido:
           </p>
           <span className="flex items-center gap-2">
             {pedido.urgente && <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-[11px] font-bold text-red-700">Urgente</span>}
-            <SeloStatus status={pedido.status} />
+            <SeloStatus status={pedido.status} visao={visao} />
           </span>
         </div>
         <div className="mt-2">

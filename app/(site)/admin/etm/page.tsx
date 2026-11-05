@@ -60,6 +60,7 @@ export default async function AdminEtmPage({
         <TiposEtm tipos={tipos} />
 
         <FeedFiltravel
+          visao="igor"
           pedidos={pedidos}
           resumos={resumos}
           base="/admin/etm"

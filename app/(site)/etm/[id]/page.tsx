@@ -16,7 +16,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
   if (!user) redirect("/etm/login");
   const { id } = await params;
   const db = supabaseAdmin();
-  const [detalhe, limite] = db ? await Promise.all([carregarDetalhe(db, id), limiteDeEnvio(db)]) : [null, 0];
+  const [detalhe, limite] = db ? await Promise.all([carregarDetalhe(db, id, user.admin), limiteDeEnvio(db)]) : [null, 0];
   if (!detalhe) notFound();
 
   const abertas = perguntasAbertas(detalhe.eventos);

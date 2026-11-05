@@ -9,6 +9,7 @@ import {
   type Pedido,
   type ResumoPedido,
   type StatusPedido,
+  type Visao,
 } from "@/lib/etm";
 import FeedPedidos from "./FeedPedidos";
 import FiltrosFeed from "./FiltrosFeed";
@@ -23,6 +24,7 @@ type Props = {
   inicial: Filtros;
   vazioSemFiltro: string;
   destacarPerguntas?: boolean;
+  visao?: Visao;
 };
 
 /**
@@ -30,7 +32,7 @@ type Props = {
  * o que já está na tela, sem consultar o servidor nem o banco. O endereço é atualizado sem recarregar,
  * para o link filtrado poder ser compartilhado.
  */
-export default function FeedFiltravel({ pedidos, resumos, base, precisaAcao, rotuloAcao, inicial, vazioSemFiltro, destacarPerguntas }: Props) {
+export default function FeedFiltravel({ pedidos, resumos, base, precisaAcao, rotuloAcao, inicial, vazioSemFiltro, destacarPerguntas, visao }: Props) {
   const [filtros, setFiltros] = useState<Filtros>(inicial);
   const contagens = useMemo(() => contarGrupos(pedidos, precisaAcao), [pedidos, precisaAcao]);
   const tipos = useMemo(() => [...new Set(pedidos.map((p) => rotuloTipo(p.tipo)))].sort((a, b) => a.localeCompare(b, "pt-BR")), [pedidos]);
@@ -55,6 +57,7 @@ export default function FeedFiltravel({ pedidos, resumos, base, precisaAcao, rot
         base={base}
         precisaAcao={precisaAcao}
         destacarPerguntas={destacarPerguntas}
+        visao={visao}
         vazio={filtrando ? "Nenhum pedido com esses filtros." : vazioSemFiltro}
       />
     </div>

@@ -10,6 +10,7 @@ import {
   type Pedido,
   type ResumoPedido,
   type StatusPedido,
+  type Visao,
 } from "@/lib/etm";
 import { SeloStatus } from "./DetalhePedido";
 import { EtapasCompactas } from "./EtapasPedido";
@@ -34,12 +35,14 @@ function Cartao({
   base,
   aguarda,
   destacarPerguntas,
+  visao,
 }: {
   pedido: Pedido;
   resumo?: ResumoPedido;
   base: string;
   aguarda: boolean;
   destacarPerguntas: boolean;
+  visao: Visao;
 }) {
   const ultimo = resumo?.ultimo;
   const perguntas = resumo?.perguntasAbertas ?? 0;
@@ -64,7 +67,7 @@ function Cartao({
           )}
           {aguarda && <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white">Precisa de ação</span>}
           {p.urgente && <span className="rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">Urgente</span>}
-          <SeloStatus status={p.status} />
+          <SeloStatus status={p.status} visao={visao} />
         </div>
       </div>
 
@@ -109,6 +112,7 @@ export default function FeedPedidos({
   precisaAcao,
   vazio,
   destacarPerguntas = false,
+  visao = "etm",
 }: {
   pedidos: Pedido[];
   resumos: Record<string, ResumoPedido>;
@@ -117,6 +121,8 @@ export default function FeedPedidos({
   vazio: string;
   /** Na área da ETM, pergunta sem resposta destaca o cartão. */
   destacarPerguntas?: boolean;
+  /** Quem está olhando: muda o texto de alguns status. */
+  visao?: Visao;
 }) {
   if (pedidos.length === 0) {
     return (
@@ -145,7 +151,7 @@ export default function FeedPedidos({
           <ul className="space-y-3">
             {d.itens.map((p) => (
               <li key={p.id}>
-                <Cartao pedido={p} resumo={resumos[p.id]} base={base} aguarda={precisaAcao.includes(p.status)} destacarPerguntas={destacarPerguntas} />
+                <Cartao pedido={p} resumo={resumos[p.id]} base={base} aguarda={precisaAcao.includes(p.status)} destacarPerguntas={destacarPerguntas} visao={visao} />
               </li>
             ))}
           </ul>
