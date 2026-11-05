@@ -1,21 +1,14 @@
 "use client";
 
+import PlayerVideo from "./PlayerVideo";
+
 /**
- * Imagem e vídeo sem o menu do botão direito ("Salvar como...") e sem arrastar para salvar.
+ * Imagem e vídeo (no player do site) sem o menu do botão direito ("Salvar como...") e sem arrastar para salvar.
  * É só um obstáculo no navegador: o jeito normal de baixar passa a ser o botão "Baixar" do sistema,
  * que só aparece depois da aprovação.
  */
-export function VideoProtegido({ src, className, semBaixar = true }: { src: string; className?: string; semBaixar?: boolean }) {
-  return (
-    <video
-      controls
-      preload="metadata"
-      src={src}
-      controlsList={semBaixar ? "nodownload" : undefined}
-      onContextMenu={(e) => e.preventDefault()}
-      className={className}
-    />
-  );
+export function VideoProtegido({ src, className }: { src: string; className?: string }) {
+  return <PlayerVideo src={src} classeVideo={className} />;
 }
 
 export function ImagemProtegida({ src, alt, className }: { src: string; alt: string; className?: string }) {

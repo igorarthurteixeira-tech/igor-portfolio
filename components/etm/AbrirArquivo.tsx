@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ehImagem, ehPdf, ehVideo } from "@/lib/etm";
+import PlayerVideo from "./PlayerVideo";
 
 /**
  * Abre um arquivo (imagem, vídeo ou PDF) numa janela por cima da própria página, sem sair dela nem abrir outra aba.
@@ -78,13 +79,11 @@ export default function AbrirArquivo({
               />
             )}
             {ehVideo(nome) && (
-              <video
+              <PlayerVideo
                 src={url}
-                controls
                 autoPlay
-                controlsList="nodownload"
-                onContextMenu={(e) => e.preventDefault()}
-                className="max-h-full max-w-full rounded-lg bg-black shadow-2xl"
+                classe="shadow-2xl"
+                classeVideo="max-h-[calc(100dvh-7rem)] max-w-[calc(100vw-3rem)]"
               />
             )}
             {ehPdf(nome) && <iframe src={url} title={nome} className="h-full w-full max-w-5xl rounded-lg bg-white shadow-2xl" />}
