@@ -27,7 +27,7 @@ export default async function PedidoEtmPage({ params }: { params: Promise<{ id: 
       <HeroEtm eyebrow={`Pedido #${detalhe.pedido.numero}`} titulo={detalhe.pedido.titulo} />
       <div className="relative z-10 mx-auto -mt-14 max-w-4xl space-y-6 px-6">
         <Link href="/etm" className="inline-block text-sm font-medium text-blue-100 hover:text-white">← Voltar aos pedidos</Link>
-        <CabecalhoPedido pedido={detalhe.pedido} topo="top-18" />
+        <CabecalhoPedido pedido={detalhe.pedido} topo="top-18" bloqueado={abertas.length > 0} />
         {abertas.length > 0 && (
           <PerguntasAbertas
             pedidoId={id}

@@ -4,9 +4,10 @@ import EtapasPedido from "./EtapasPedido";
 
 /**
  * Cartão com o número, o título, o status e as etapas do pedido. Fica sempre no topo e fixo ao rolar a página.
+ * `bloqueado` marca o trecho da linha como parado quando há pergunta sem resposta.
  * `topo` é a distância até as barras fixas do site (classe do Tailwind, escrita por inteiro em quem usa).
  */
-export default function CabecalhoPedido({ pedido, topo }: { pedido: Pedido; topo: string }) {
+export default function CabecalhoPedido({ pedido, topo, bloqueado = false }: { pedido: Pedido; topo: string; bloqueado?: boolean }) {
   return (
     <div className={`sticky z-30 ${topo}`}>
       <div className="card px-4 py-3 shadow-lg shadow-slate-900/10 sm:px-6">
@@ -22,7 +23,7 @@ export default function CabecalhoPedido({ pedido, topo }: { pedido: Pedido; topo
           </span>
         </div>
         <div className="mt-2">
-          <EtapasPedido status={pedido.status} compacto />
+          <EtapasPedido status={pedido.status} compacto bloqueado={bloqueado} />
         </div>
       </div>
     </div>
