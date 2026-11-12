@@ -13,7 +13,17 @@ export const LOJAS_VTEX = [
   { loja: "Mondial", base: "https://www.mondial.com.br" },
   { loja: "WebContinental", base: "https://www.webcontinental.com.br" },
   { loja: "ibyte", base: "https://www.ibyte.com.br" },
+  { loja: "Americanas", base: "https://www.americanas.com.br" },
 ] as const;
+
+type VendedorVtex = { sellerName: string; commertialOffer: { Price: number; AvailableQuantity: number } };
+
+/** Em marketplace (ex.: Americanas) o mesmo produto tem vários vendedores: vale o mais barato com estoque. */
+export function melhorVendedorVtex(vendedores: VendedorVtex[] | undefined): VendedorVtex | undefined {
+  const lista = vendedores ?? [];
+  const comEstoque = lista.filter((v) => v.commertialOffer?.AvailableQuantity > 0 && v.commertialOffer?.Price > 0);
+  return comEstoque.sort((a, b) => a.commertialOffer.Price - b.commertialOffer.Price)[0] ?? lista[0];
+}
 
 export type Oferta =
   | { loja: string; tipo: "kabum"; codigo: string }
@@ -116,7 +126,7 @@ async function lerVtex(base: string, ref: string, id?: string): Promise<Omit<Lei
   const p = id ? lista[0] : lista.find((x) => x.productReference === ref);
   if (!p) throw new Error("produto não encontrado na loja");
   const item = p.items[0];
-  const vendedor = item.sellers[0];
+  const vendedor = melhorVendedorVtex(item.sellers);
   const preco = vendedor?.commertialOffer?.Price;
   return {
     nome: p.productName,

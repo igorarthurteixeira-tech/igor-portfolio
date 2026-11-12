@@ -1,7 +1,7 @@
 // Busca de produtos nas lojas reais: o usuário digita o que procura ("televisor 65 polegadas",
 // "geladeira 320 litros") e o servidor pergunta a cada loja aceita, filtra o que é de fato aquele
 // produto (sem acessórios) e junta o mesmo modelo vendido em lojas diferentes numa linha só.
-import { LOJAS_VTEX, chaveOferta, type Oferta } from "./fonte";
+import { LOJAS_VTEX, chaveOferta, melhorVendedorVtex, type Oferta } from "./fonte";
 
 export type OfertaEncontrada = Oferta & { preco: number; vendedor: string; url: string };
 export type ResultadoBusca = {
@@ -191,7 +191,7 @@ async function buscarVtex(loja: string, base: string, p: Pedido): Promise<Achado
   const lista = (await r.json()) as ProdutoVtex[];
   return lista.flatMap((x) => {
     const item = x.items?.[0];
-    const vend = item?.sellers?.[0];
+    const vend = melhorVendedorVtex(item?.sellers);
     const preco = vend?.commertialOffer?.Price ?? 0;
     if (!item || !vend || !(preco > 0) || !(vend.commertialOffer.AvailableQuantity > 0) || !x.productReference) return [];
     return [

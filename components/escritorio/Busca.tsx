@@ -132,7 +132,7 @@ export function BuscaProdutos({
       )}
 
       {buscando && (
-        <p className="mt-3 animate-pulse text-sm text-slate-300">O pesquisador está consultando as lojas (KaBuM e lojas VTEX)...</p>
+        <p className="mt-3 animate-pulse text-sm text-slate-300">O pesquisador está consultando as lojas (KaBuM, Americanas e lojas VTEX)...</p>
       )}
 
       {resposta && (
