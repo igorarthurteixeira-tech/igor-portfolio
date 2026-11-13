@@ -20,7 +20,7 @@ export default function EscritorioDeComprasPage() {
             histórico de preços de cada um e avisa quando o preço sobe ou cai.
           </p>
           <p className="mt-2 max-w-2xl text-xs text-muted">
-            Preços lidos das páginas públicas da KaBuM e de lojas da plataforma VTEX (Americanas, Consul, Brastemp, Philco, WebContinental, ibyte e outras), sem frete. Confira na loja
+            Preços lidos das páginas públicas da KaBuM e de lojas da plataforma VTEX (Americanas, Casa&Video, Quero-Quero, Electrolux, Consul, Brastemp, WebContinental, ibyte e outras), sem frete. Confira na loja
             antes de comprar.
           </p>
         </header>

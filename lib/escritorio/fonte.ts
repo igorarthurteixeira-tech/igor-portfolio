@@ -14,6 +14,16 @@ export const LOJAS_VTEX = [
   { loja: "WebContinental", base: "https://www.webcontinental.com.br" },
   { loja: "ibyte", base: "https://www.ibyte.com.br" },
   { loja: "Americanas", base: "https://www.americanas.com.br" },
+  { loja: "Casa&Video", base: "https://www.casaevideo.com.br" },
+  { loja: "Quero-Quero", base: "https://www.queroquero.com.br" },
+  { loja: "Lojas MM", base: "https://www.lojasmm.com" },
+  { loja: "Obabox", base: "https://www.obabox.com.br" },
+  { loja: "Polishop", base: "https://www.polishop.com.br" },
+  { loja: "Electrolux", base: "https://loja.electrolux.com.br" },
+  { loja: "Elgin", base: "https://www.elgin.com.br" },
+  { loja: "Arno", base: "https://www.arno.com.br" },
+  { loja: "Oster", base: "https://www.oster.com.br" },
+  { loja: "Mallory", base: "https://www.mallory.com.br" },
 ] as const;
 
 type VendedorVtex = { sellerName: string; commertialOffer: { Price: number; AvailableQuantity: number } };

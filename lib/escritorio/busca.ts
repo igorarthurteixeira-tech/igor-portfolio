@@ -40,7 +40,7 @@ const TIPOS: Tipo[] = [
 const PALAVRAS_VAZIAS = new Set(["de", "da", "do", "com", "para", "e", "a", "o", "um", "uma", "smart", "polegadas", "pol", "litros", "lts", "l"]);
 /** Primeira palavra de nomes de acessórios e peças: não são o produto procurado. */
 const ACESSORIOS = new Set(
-  "home suporte rack painel capa controle cabo kit antena conversor estante pe base filtro porta pote potes organizador borracha gaxeta prateleira gaveta puxador lampada compressor motoventilador armario tampa protetor pelicula adaptador bandeja termostato placa sensor peca resistencia carregador fonte bateria mesa ventilador timer dobradica refil jogo conjunto".split(
+  "home suporte rack painel capa controle cabo kit antena conversor estante pe base filtro porta pote potes organizador borracha gaxeta prateleira gaveta puxador lampada compressor motoventilador armario tampa protetor pelicula adaptador bandeja termostato placa sensor peca resistencia carregador fonte bateria timer dobradica refil jogo conjunto forma forro apoio trava cadeado coletor escova mandril broca instalacao servico garantia".split(
     " ",
   ),
 );
@@ -48,9 +48,13 @@ const ACESSORIOS = new Set(
 export type Pedido = { termo: string; tipo: Tipo | null; palavras: string[]; medida: { valor: number; unidade: Unidade | null; texto: string } | null };
 
 export function entender(termo: string): Pedido {
-  const t = semAcento(termo).replace(/[^\w"”\s.,]/g, " ").replace(/\s+/g, " ").trim();
+  const t = semAcento(termo)
+    .replace(/(\d)\.(\d{3})(?!\d)/g, "$1$2") // "12.000 btus" -> "12000 btus"
+    .replace(/[^\w"”\s.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   const tipo = TIPOS.find((x) => t.split(" ").some((p) => x.palavras.includes(p))) ?? null;
-  const m = t.match(/(\d{1,4}(?:[.,]\d)?)\s*("|”|''|polegadas\b|pol\b|litros\b|lts?\b|l\b)?/);
+  const m = t.match(/(\d{1,6}(?:[.,]\d)?)\s*("|”|''|polegadas\b|pol\b|litros\b|lts?\b|l\b)?/);
   let medida: Pedido["medida"] = null;
   if (m) {
     const valor = Number(m[1].replace(",", "."));
@@ -95,7 +99,16 @@ export function modelosDe(nome: string): string[] {
 function eOProduto(nome: string, p: Pedido) {
   const n = semAcento(nome).replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
   const ps = n.split(" ");
-  if (ACESSORIOS.has(ps[0])) return false;
+  // palavra principal do pedido: o tipo (TV, geladeira) ou a primeira palavra digitada ("airfryer", "notebook")
+  const principal = p.tipo ? null : p.palavras[0];
+  if (ACESSORIOS.has(ps[0]) && ps[0] !== principal) return false;
+  if (principal) {
+    // o produto procurado aparece logo no começo do nome, e não depois de "para" ("Forma para Airfryer")
+    const onde = ps.findIndex((x) => x.startsWith(principal));
+    if (onde < 0 || onde > 3) return false;
+    const para = ps.findIndex((x) => x === "para" || x === "p" || x === "pra");
+    if (para >= 0 && para < onde) return false;
+  }
   if (p.tipo) {
     // "Rack para TV", "Home p/ TV 65": é para o produto, não o produto
     if (p.tipo.palavras.some((w) => new RegExp(`\\b(para|p)\\s+(a\\s+|o\\s+)?${w}\\b`).test(n))) return false;
@@ -119,8 +132,9 @@ function conferirMedida(nome: string, p: Pedido): { ok: boolean; exato: boolean;
     const dif = Math.abs(lt - valor) / valor;
     return { ok: dif <= 0.1, exato: dif <= 0.02, medida };
   }
-  // número sem unidade conhecida: precisa aparecer no nome como número solto
-  return { ok: new RegExp(`(?<![\\w.,])${valor}(?![\\d.,])`).test(semAcento(nome)), exato: true, medida };
+  // número sem unidade conhecida (ex.: "12000 btus"): precisa aparecer no nome como número solto ("12.000" vale)
+  const semMilhar = semAcento(nome).replace(/(\d)\.(\d{3})(?!\d)/g, "$1$2");
+  return { ok: new RegExp(`(?<![\\w.,])${valor}(?![\\d.,])`).test(semMilhar), exato: true, medida };
 }
 
 // ---------------------------------------------------------------------------
@@ -286,6 +300,11 @@ export async function buscarNasLojas(termo: string): Promise<RespostaBusca> {
       if (m.ok) achados.push({ ...a, exato: m.exato, medida: m.medida });
     }
   });
+  if (achados.length >= 6) {
+    const precos = achados.map((a) => a.oferta.preco).sort((a, b) => a - b);
+    const tipico = precos[Math.floor(precos.length / 2)];
+    for (let i = achados.length - 1; i >= 0; i--) if (achados[i].oferta.preco < tipico * 0.2) achados.splice(i, 1);
+  }
   const resultados = agrupar(achados)
     .sort((a, b) => Number(b.exato) - Number(a.exato) || a.menor - b.menor)
     .slice(0, 40);

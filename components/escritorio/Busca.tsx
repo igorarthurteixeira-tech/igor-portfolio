@@ -5,7 +5,7 @@ import type { RespostaBusca, ResultadoBusca } from "@/lib/escritorio/busca";
 import { dinheiro } from "@/lib/escritorio/eventos";
 import { Painel } from "./Paineis";
 
-const EXEMPLOS = ["televisor 65 polegadas", "geladeira 320 litros", "smart tv 55", "geladeira frost free 400 litros"];
+const EXEMPLOS = ["televisor 65 polegadas", "geladeira 400 litros", "airfryer", "ar condicionado 12000 btus", "notebook", "ventilador de coluna"];
 
 /**
  * Busca de produtos nas lojas reais. O pesquisador faz a busca de verdade (a cena mostra ele indo às lojas)
